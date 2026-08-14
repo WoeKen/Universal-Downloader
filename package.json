@@ -1,0 +1,42 @@
+{
+  "name": "universal-downloader",
+  "version": "1.1.9",
+  "description": "Windows universal download manager",
+  "main": "src/main.js",
+  "scripts": {
+    "setup": "powershell -ExecutionPolicy Bypass -File .\\setup.ps1",
+    "start": "electron .",
+    "build": "electron-builder --win"
+  },
+  "devDependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "electronVersion": "31.7.7",
+    "appId": "com.universal.downloader",
+    "productName": "Universal Downloader",
+    "files": [
+      "src/**/*",
+      "tools/**/*",
+      "package.json",
+      "assets/**/*"
+    ],
+    "asarUnpack": [
+      "tools/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "signAndEditExecutable": false,
+      "icon": "assets/app.ico",
+      "artifactName": "Universal Downloader Setup ${version}.${ext}"
+    },
+    "nsis": {
+      "shortcutName": "Universal Downloader",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "menuCategory": "Internet"
+    }
+  }
+}

@@ -1,0 +1,29 @@
+.ud-floating-video-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2147483647;
+  padding: 6px 12px;
+  background: rgba(10, 14, 23, 0.88);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 198, 255, 0.5);
+  border-radius: 20px;
+  color: #00f2fe;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  transition: all 0.2s ease;
+  opacity: 0.85;
+  user-select: none;
+}
+
+.ud-floating-video-badge:hover {
+  opacity: 1;
+  transform: scale(1.05);
+  background: #0071e3;
+  color: #fff;
+  border-color: #00f2fe;
+  box-shadow: 0 6px 20px rgba(0, 113, 227, 0.6);
+}

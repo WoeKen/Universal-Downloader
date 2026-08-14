@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>全能下载器</title>
+  <style>
+    body {
+      width: 260px;
+      margin: 0;
+      padding: 16px;
+      background: #0d1117;
+      color: #f0f6fc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .logo {
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, #0071e3, #00f2fe);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+    .title {
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .desc {
+      font-size: 11.5px;
+      color: #8b949e;
+      line-height: 1.4;
+      margin-bottom: 14px;
+    }
+    .btn {
+      width: 100%;
+      padding: 9px 0;
+      background: linear-gradient(135deg, #0071e3, #00c6ff);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn:hover {
+      opacity: 0.92;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">⚡</div>
+    <div class="title">全能下载器</div>
+  </div>
+  <div class="desc">在任意网页右键链接或视频，即可快速召唤全能下载器启动多线程极速传输。</div>
+  <button id="openAppBtn" class="btn">🚀 呼出全能下载器</button>
+  <script src="popup.js"></script>
+</body>
+</html>

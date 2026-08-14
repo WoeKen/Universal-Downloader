@@ -1,0 +1,1618 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Universal Downloader</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Ambient Liquid Glass Backdrop Layer -->
+  <div class="ambient-glow-layer" aria-hidden="true">
+    <div class="ambient-orb orb-primary"></div>
+    <div class="ambient-orb orb-secondary"></div>
+    <div class="ambient-orb orb-accent"></div>
+  </div>
+
+  <!-- Clipboard Link Detection Floating Island -->
+  <div id="clipboardBanner" class="clipboard-banner glass-card hidden" role="alert">
+    <div class="clip-info">
+      <div class="clip-icon">📋</div>
+      <div class="clip-text">
+        <span>检测到剪贴板下载链接</span>
+        <b id="clipboardUrlText">https://...</b>
+      </div>
+    </div>
+    <div class="clip-actions">
+      <button class="glass-btn mini-btn" id="clipboardDismiss">忽略</button>
+      <button class="liquid-btn primary-btn mini-btn" id="clipboardAccept">立即下载</button>
+    </div>
+  </div>
+
+  <div class="app-layout">
+    <!-- Frosted Glass Sidebar -->
+    <aside class="glass-sidebar">
+      <div class="brand">
+        <div class="logo">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <b>Universal Downloader</b>
+          <small>LIQUID WORKSTATION</small>
+        </div>
+      </div>
+
+      <nav class="nav-list">
+        <button class="nav active" data-filter="all" data-i18n="allTasks">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          </span>
+          <span class="nav-label" data-i18n-text="allTasks">全部任务</span>
+          <em id="countAll" class="glass-badge">0</em>
+        </button>
+        <button class="nav" data-filter="downloading" data-i18n="downloading">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v14M19 9l-7 7-7-7M2 19h20"></path></svg>
+          </span>
+          <span class="nav-label" data-i18n-text="downloading">正在下载</span>
+          <em id="countRun" class="glass-badge highlight">0</em>
+        </button>
+        <button class="nav" data-filter="completed" data-i18n="completed">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+          </span>
+          <span class="nav-label" data-i18n-text="completed">已完成</span>
+          <em id="countDone" class="glass-badge">0</em>
+        </button>
+        <button class="nav" data-filter="paused" data-i18n="paused">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="10" y1="15" x2="10" y2="9"></line><line x1="14" y1="15" x2="14" y2="9"></line></svg>
+          </span>
+          <span class="nav-label" data-i18n-text="paused">已暂停</span>
+        </button>
+        <button class="nav" data-filter="failed" data-i18n="failed">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+          </span>
+          <span class="nav-label" data-i18n-text="failed">失败/异常</span>
+        </button>
+      </nav>
+
+      <div class="side-bottom">
+        <button class="nav glass-action-btn" id="settingsBtn">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          </span>
+          <span class="nav-label" data-i18n-text="settings">设置中心</span>
+        </button>
+
+        <button class="nav glass-action-btn contact-author-side-btn" id="contactAuthorBtn" style="margin-top:6px; border:1px solid rgba(37,211,102,0.4); background:linear-gradient(135deg, rgba(37,211,102,0.15), rgba(18,140,126,0.22));">
+          <span class="nav-icon" style="color:#25d366; display:flex; align-items:center;">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+          </span>
+          <span class="nav-label" style="color:#25d366; font-weight:750;">💬 联系作者 / 商务合作</span>
+        </button>
+
+        <p class="side-hint" data-i18n="supported">HTTP/HTTPS 零拷贝分片 · 智能流媒体嗅探</p>
+        <div class="side-footer-meta">
+          <span class="side-build">v1.1.9 Liquid Edition</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-viewport">
+      <!-- Glass Header -->
+      <header class="glass-header">
+        <div class="header-titles">
+          <div class="kicker">DOWNLOAD WORKSTATION</div>
+          <h1 id="pageTitle" data-i18n="allTasks">全部任务</h1>
+          <p id="pageSubtitle" data-i18n="subtitle">高速分片传输、视频解析及断点续传管理</p>
+        </div>
+
+        <div class="actions">
+          <div class="system-state-badge" id="systemStatusBadge">
+            <span class="pulse-dot"></span>
+            <span id="systemState">Ready</span>
+          </div>
+
+          <div class="glass-select-wrapper">
+            <select id="language" class="glass-select language" aria-label="Language Selector">
+              <option value="zh">中文</option>
+              <option value="en">EN</option>
+            </select>
+          </div>
+
+          <button class="glass-btn icon-btn" id="themeToggle" title="切换深浅主题">
+            <span class="theme-icon">◐</span>
+            <span id="themeText">深色</span>
+          </button>
+
+          <button class="glass-btn secondary-btn" id="openClipboardHistoryBtn" title="查看最近复制捕获的链接与时光备忘">📋 时光备忘箱 <span id="clipboardHistoryCountBadge" class="mini-count-badge hidden">0</span></button>
+          <button class="glass-btn secondary-btn" id="mobileCastBtn" title="手机局域网扫码无线投递">📱 手机扫码</button>
+          <button class="glass-btn secondary-btn" id="clearCompletedBtn" title="一键清空已完成和已取消的任务">🧹 清空已完成</button>
+          <button class="glass-btn secondary-btn" id="pauseAll" data-i18n="pauseAll">全部暂停</button>
+          <button class="liquid-btn primary-btn" id="addBtn" data-i18n="newDownload">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span data-i18n-text="newDownload">新建下载</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Glass Metric Cards -->
+      <section class="overview-grid">
+        <div class="metric-card glass-card">
+          <div class="metric-icon-box blue-glow">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v14M19 9l-7 7-7-7M2 19h20"></path></svg>
+          </div>
+          <div class="metric-content">
+            <small data-i18n="activeTasks">活动任务</small>
+            <strong id="metricActive">0</strong>
+            <span data-i18n="activeHint">正在并发传输</span>
+          </div>
+        </div>
+
+        <div class="metric-card glass-card">
+          <div class="metric-icon-box green-glow">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+          </div>
+          <div class="metric-content">
+            <small data-i18n="completedTasks">已完成</small>
+            <strong id="metricCompleted">0</strong>
+            <span data-i18n="completedHint">传输成功完成</span>
+          </div>
+        </div>
+
+        <div class="metric-card glass-card speed-metric-card">
+          <div class="speed-sparkline-wrap">
+            <div class="speed-text-meta">
+              <small data-i18n="liveSpeedLabel">实时下载速率</small>
+              <strong id="metricLiveSpeed">0 B/s</strong>
+            </div>
+            <canvas id="speedWaveCanvas" width="160" height="38" class="speed-wave-canvas"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- Glass Hero Banner -->
+      <section class="hero-banner glass-card">
+        <div class="hero-text-content">
+          <div class="hero-badge">LIQUID SPEED CORE</div>
+          <h2 data-i18n="heroTitle">粘贴下载链接，<br><strong>剩下的交给全能内核。</strong></h2>
+          <p data-i18n="heroBody">支持 HTTP/HTTPS 零耗时随机写分片、剪贴板自动嗅探、视频智能预解析与纯音频 MP3 提取。</p>
+        </div>
+        <div class="hero-artwork">
+          <div class="liquid-disc">
+            <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M12 2v14M19 9l-7 7-7-7M2 19h20"></path>
+            </svg>
+            <span class="disc-label">ACCELERATED</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Glass Toolbar -->
+      <section class="glass-toolbar">
+        <div class="search-box glass-input-wrapper">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" class="search-icon"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input id="search" data-i18n-placeholder="search" placeholder="搜索任务名称或链接..." autocomplete="off">
+        </div>
+        <div class="glass-select-wrapper sort-wrapper">
+          <select id="sort" class="glass-select" aria-label="Sort Downloads">
+            <option value="new" data-i18n="sortByCreated">按创建时间</option>
+            <option value="progress" data-i18n="sortByProgress">按下载进度</option>
+            <option value="name" data-i18n="sortByName">按任务名称</option>
+          </select>
+        </div>
+      </section>
+
+      <!-- Download Tasks Container -->
+      <section id="taskList" class="task-list-flow"></section>
+
+      <!-- Empty State -->
+      <section id="empty" class="empty-state glass-card">
+        <div class="empty-icon-halo">
+          <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"></circle><polyline points="8 12 12 16 16 12"></polyline><line x1="12" y1="8" x2="12" y2="16"></line></svg>
+        </div>
+        <h3 data-i18n="emptyTitle">还没有下载任务</h3>
+        <p data-i18n="emptyBody">点击右上角或下方按钮新建下载，体验极致液态玻璃下载流。</p>
+        <button class="liquid-btn primary-btn" id="emptyAdd" data-i18n="newDownload">新建下载任务</button>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal 1: New Download Modal with Smart Sniffer & Audio Mode -->
+  <div id="modal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="glass-modal-card large-modal">
+      <button class="modal-close-btn" id="closeModal" aria-label="Close modal">×</button>
+      
+      <div class="modal-header">
+        <span class="modal-kicker">NEW TASK</span>
+        <h2 data-i18n="addDownloads">添加下载任务</h2>
+        <p data-i18n="urlHelp">支持单行或批量多行链接。输入单个视频链接自动开启智能解析。</p>
+      </div>
+
+      <!-- Distinct Download Channel Selector Pills -->
+      <div class="mode-selector-pills" id="modalChannelPills">
+        <button type="button" class="mode-pill active" data-mode="video">
+          <span>🎬 网页视频 (Video)</span>
+        </button>
+        <button type="button" class="mode-pill" data-mode="audio">
+          <span>🎵 音频提取 (MP3)</span>
+        </button>
+        <button type="button" class="mode-pill" data-mode="sniffer">
+          <span>⚡ 网页透视 (Sniffer)</span>
+        </button>
+        <button type="button" class="mode-pill" data-mode="torrent">
+          <span>🧲 磁力/种子 (Torrent)</span>
+        </button>
+        <button type="button" class="mode-pill" data-mode="file">
+          <span>📦 通用直链 (File)</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Channel 1: Standard URL Input (Video / Audio / File) -->
+        <div id="channelPaneStandard" class="channel-pane active">
+          <label class="form-group">
+            <div class="label-row-meta">
+              <span class="form-label">下载链接 (URLs)</span>
+              <div class="label-actions-right">
+                <button type="button" class="glass-btn mini-btn text-accent" id="sniffPlaylistBtn" title="嗅探该链接包含的全部多P分集或播放列表">🎬 批量嗅探合集/多P</button>
+                <span class="sniff-status-badge hidden" id="sniffIndicator">
+                  <span class="spin-dot"></span> 正在智能预解析...
+                </span>
+              </div>
+            </div>
+            <textarea id="urlInput" class="glass-textarea" placeholder="https://www.bilibili.com/video/...&#10;https://www.youtube.com/watch?v=...&#10;https://example.com/file.zip"></textarea>
+          </label>
+
+          <!-- Smart Sniffer Preview Card -->
+          <div id="sniffPreviewCard" class="sniff-preview-card glass-card hidden">
+            <div class="sniff-thumb-wrap">
+              <img id="sniffThumb" src="" alt="Thumbnail">
+              <span id="sniffDuration" class="sniff-duration-badge">00:00</span>
+            </div>
+            <div class="sniff-info">
+              <b id="sniffTitle" class="sniff-title">视频标题</b>
+              <div class="sniff-meta-row">
+                <span id="sniffUploader" class="sniff-uploader">UP主 / 频道</span>
+                <span id="sniffSizeBadge" class="sniff-size-pill">📦 预估大小: 计算中...</span>
+                <span class="sniff-platform-tag">智能嗅探成功</span>
+              </div>
+            </div>
+          </div>
+
+          <label class="form-group">
+            <span class="form-label" data-i18n="nameOptional">自定义任务名称（可选）</span>
+            <input id="nameInput" class="glass-input" placeholder="留空则自动提取视频标题或文件名">
+          </label>
+
+          <div class="quality-grid" id="qualityControlsGrid">
+            <label class="form-group" id="videoQualityGroup">
+              <span class="form-label" data-quality-label="video">视频分辨率</span>
+              <div class="glass-select-wrapper">
+                <select id="videoQuality" class="glass-select">
+                  <option value="best">最高可用（Best Available）</option>
+                  <option value="2160">4K 超高清（2160p）</option>
+                  <option value="1440">2K 高清（1440p）</option>
+                  <option value="1080">1080P 全高清（1080p）</option>
+                  <option value="720">720P 高清（720p）</option>
+                  <option value="480">480P 标清（480p）</option>
+                </select>
+              </div>
+            </label>
+
+            <label class="form-group" id="audioQualityGroup">
+              <span class="form-label" data-quality-label="audio">音频音质 / 码率</span>
+              <div class="glass-select-wrapper">
+                <select id="audioQuality" class="glass-select">
+                  <option value="320">320 kbps (最高无损质感)</option>
+                  <option value="256">256 kbps (超清音质)</option>
+                  <option value="192">192 kbps (标准音质)</option>
+                  <option value="128">128 kbps (高压缩)</option>
+                </select>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Channel 2: Embedded Web Sniffer Channel Pane -->
+        <div id="channelPaneSniffer" class="channel-pane hidden">
+          <div class="cookie-guide-banner glass-card" style="margin-bottom:12px;">
+            <div class="guide-icon">⚡</div>
+            <div class="guide-text">
+              <b>网页流媒体深度透视嗅探</b>
+              <p>启动内置液态浏览器，在页面中正常播放视频，底层加密 m3u8、ts 分片与 MP4 直链将实时在下方捕获！</p>
+            </div>
+          </div>
+          <div class="sniffer-launch-bar">
+            <input id="modalSnifferUrlInput" class="glass-input" placeholder="输入任意视频网页 URL (如 https://www.bilibili.com/video/...)">
+            <button type="button" class="liquid-btn primary-btn" id="modalLaunchSnifferBtn" style="white-space:nowrap;">🌐 启动嗅探窗口</button>
+          </div>
+          <div class="sniffer-streams-wrap glass-card">
+            <div class="sniffer-streams-header">
+              <b>⚡ 实时截获媒体流 (<span id="modalSniffedCount">0</span>)</b>
+              <span style="font-size:11px; color:var(--text-tertiary);">点击流媒体项即可自动载入下载</span>
+            </div>
+            <div id="modalSniffedStreamsList" class="sniffer-streams-list" style="max-height:220px;">
+              <div class="empty-hint-text">暂无截获到的媒体流，请点击上方启动嗅探窗口播放视频</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Channel 3: Embedded Torrent & Magnet Channel Pane -->
+        <div id="channelPaneTorrent" class="channel-pane hidden">
+          <div class="cookie-guide-banner glass-card" style="margin-bottom:12px;">
+            <div class="guide-icon">🧲</div>
+            <div class="guide-text">
+              <b>磁力链接与 BT 种子原生穿透选集</b>
+              <p>纯原生零依赖 Bencode 解码，支持磁力链接秒级元数据解析与多文件树形按需勾选。</p>
+            </div>
+          </div>
+          <div class="torrent-input-bar">
+            <input id="modalTorrentInput" class="glass-input" placeholder="粘贴 magnet:?xt=urn:btih:... 磁力链接或选择种子文件">
+            <button type="button" class="glass-btn secondary-btn" id="modalPickTorrentBtn" style="white-space:nowrap;">📁 选择种子</button>
+            <button type="button" class="liquid-btn primary-btn" id="modalParseTorrentBtn" style="white-space:nowrap;">🔍 解析内容</button>
+          </div>
+          <div id="modalTorrentMetaCard" class="torrent-meta-card glass-card hidden">
+            <div class="torrent-name-row">
+              <b id="modalTorrentTitle">种子名称</b>
+              <span id="modalTorrentTotalSize" class="sniff-size-pill">0 MB</span>
+            </div>
+            <div class="torrent-quick-bar">
+              <span class="playlist-count-pill">包含 <b id="modalTorrentFileCount">0</b> 个文件 (已选 <b id="modalTorrentSelectedCount">0</b> 项)</span>
+              <div class="quick-select-buttons">
+                <button type="button" class="glass-btn mini-btn" id="modalSelectTorrentAll">全选</button>
+                <button type="button" class="glass-btn mini-btn" id="modalSelectTorrentVideoOnly">仅选视频</button>
+                <button type="button" class="glass-btn mini-btn" id="modalSelectTorrentNone">清空选择</button>
+              </div>
+            </div>
+            <div class="torrent-files-list" id="modalTorrentFilesList" style="max-height:200px;"></div>
+          </div>
+        </div>
+
+        <!-- Schedule Download Setting (Common across channels) -->
+        <div class="schedule-picker-box glass-card" style="margin-top:14px;">
+          <div class="schedule-header-row">
+            <span class="form-label" style="margin-bottom:0;">⏰ 计划启动时间</span>
+            <div class="schedule-chips-group" id="scheduleChipsGroup">
+              <button type="button" class="schedule-chip active" data-time="now">立即开始</button>
+              <button type="button" class="schedule-chip" data-time="1h">1小时后</button>
+              <button type="button" class="schedule-chip" data-time="2h">2小时后</button>
+              <button type="button" class="schedule-chip" data-time="night">今晚 02:00</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="glass-btn secondary-btn" id="cancelModal" data-i18n="cancel">取消</button>
+        <button class="liquid-btn primary-btn" id="startDownload" data-i18n="start">立即开始</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Settings & Cookie Management Center -->
+  <div id="settingsModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="glass-modal-card large-modal">
+      <button class="modal-close-btn" id="closeSettings" aria-label="Close modal">×</button>
+      
+      <div class="modal-header">
+        <span class="modal-kicker">PREFERENCES</span>
+        <h2 data-i18n="downloadSettings">设置与凭据中心</h2>
+      </div>
+
+      <!-- Settings Tabs Navigation -->
+      <div class="settings-tabs-nav">
+        <button class="tab-btn active" data-tab="general">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          常规配置
+        </button>
+        <button class="tab-btn" data-tab="category">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+          智能归档
+        </button>
+        <button class="tab-btn" data-tab="schedule">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          时段限速
+        </button>
+        <button class="tab-btn" data-tab="network">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+          网络代理
+        </button>
+        <button class="tab-btn" data-tab="cookies">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5"></path><path d="M8.5 8.5v.01"></path><path d="M16 15.5v.01"></path><path d="M12 12v.01"></path><path d="M11 17v.01"></path><path d="M7 14v.01"></path></svg>
+          Cookie凭据
+        </button>
+        <button class="tab-btn" data-tab="browser">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+          扩展联动
+        </button>
+        <button class="tab-btn" data-tab="engine">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+          内核诊断
+        </button>
+      </div>
+
+      <!-- Tab Content 1: General Settings -->
+      <div id="tab-general" class="settings-tab-pane active">
+        <label class="form-group">
+          <span class="form-label" data-i18n="downloadFolder">默认下载目录</span>
+          <div class="row-input-group">
+            <input id="downloadDir" class="glass-input" readonly>
+            <button class="glass-btn secondary-btn" id="pickDir" data-i18n="browse">浏览选择</button>
+          </div>
+        </label>
+
+        <div class="grid-form-2x2">
+          <label class="form-group">
+            <span class="form-label" data-i18n="concurrent">最大同时并发下载任务</span>
+            <input id="maxConcurrent" class="glass-input" type="number" min="1" max="10">
+          </label>
+          <label class="form-group">
+            <span class="form-label" data-i18n="segments">单文件 HTTP 分片连接数</span>
+            <input id="segments" class="glass-input" type="number" min="1" max="32">
+          </label>
+          <label class="form-group">
+            <span class="form-label" data-i18n="speedLimit">下载限速 KB/s (0 表示不限速)</span>
+            <input id="speedLimit" class="glass-input" type="number" min="0">
+          </label>
+          <label class="form-group">
+            <span class="form-label" data-i18n="retries">失败自动重试次数</span>
+            <input id="retryCount" class="glass-input" type="number" min="0" max="10">
+        </div>
+
+        <!-- Smart Filename & Folder Template Engine -->
+        <div class="naming-template-box glass-card">
+          <label class="form-group" style="margin-bottom:8px;">
+            <span class="form-label">🏷️ 智能文件重命名模板 (通配符)</span>
+            <input id="namingPattern" class="glass-input" value="{title}" placeholder="{title}">
+          </label>
+          <div class="naming-chips-bar">
+            <span class="quick-ports-label">点击插入变量:</span>
+            <button type="button" class="token-chip" data-token="{title}">+ 标题 {title}</button>
+            <button type="button" class="token-chip" data-token="{uploader}">+ UP主 {uploader}</button>
+            <button type="button" class="token-chip" data-token="{platform}">+ 平台 {platform}</button>
+            <button type="button" class="token-chip" data-token="{date}">+ 日期 {date}</button>
+            <button type="button" class="token-chip" data-token="{index}">+ 序号 {index}</button>
+          </div>
+          <div class="naming-preview-text">
+            实时示例: <code id="namingPreview">Never Gonna Give You Up.mp4</code>
+          </div>
+        </div>
+
+        <div class="settings-switches-group">
+          <label class="ios-switch-row">
+            <input id="antiBanJitter" type="checkbox">
+            <span class="switch-slider"></span>
+            <span class="switch-label-text">🛡️ 拟人化动态休眠与随机抖动防风控 (守护高等级账号不被限流)</span>
+          </label>
+
+          <label class="ios-switch-row">
+            <input id="downloadDanmaku" type="checkbox">
+            <span class="switch-slider"></span>
+            <span class="switch-label-text">💬 自动提取双语外挂字幕与 B 站在线弹幕 (.ass / .srt)</span>
+          </label>
+
+          <label class="ios-switch-row">
+            <input id="floatingWidget" type="checkbox">
+            <span class="switch-slider"></span>
+            <span class="switch-label-text">🎯 开启桌面极简液态毛玻璃悬浮挂件 (支持直接鼠标拖拽下载)</span>
+          </label>
+
+          <label class="ios-switch-row">
+            <input id="minimizeToTray" type="checkbox">
+            <span class="switch-slider"></span>
+            <span class="switch-label-text">关闭窗口时最小化到系统托盘（后台继续下载）</span>
+          </label>
+
+          <label class="ios-switch-row">
+            <input id="clipboardMonitor" type="checkbox">
+            <span class="switch-slider"></span>
+            <span class="switch-label-text">监听系统剪贴板自动嗅探下载链接</span>
+          </label>
+
+          <label class="ios-switch-row">
+            <input id="nativeNotifications" type="checkbox">
+            <span class="switch-slider"></span>
+            <span class="switch-label-text">下载完成或异常时弹出 Windows 系统通知横幅</span>
+          </label>
+
+          <label class="ios-switch-row">
+            <input id="soundEffects" type="checkbox" checked>
+            <span class="switch-slider"></span>
+            <span class="switch-label-text">🎵 开启灵动水晶操作与下载完成提示音 (Web Audio 实时合成)</span>
+          </label>
+
+          <label class="ios-switch-row">
+            <input id="autoShutdown" type="checkbox">
+            <span class="switch-slider"></span>
+            <span class="switch-label-text" data-i18n="autoShutdown">所有下载任务完成后自动关闭 Windows 计算机</span>
+          </label>
+        </div>
+
+        <!-- History Export Section -->
+        <div class="naming-template-box glass-card" style="margin-top:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <b style="font-size:13px; color:#fff;">📊 下载历史数据归档与备份</b>
+              <p style="font-size:11.5px; color:var(--text-secondary); margin-top:2px;">一键导出全部下载历史为标准 CSV 电子表格或 JSON 结构数据</p>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button type="button" class="glass-btn mini-btn" id="exportCsvBtn">📑 导出 CSV</button>
+              <button type="button" class="glass-btn mini-btn" id="exportJsonBtn">📋 导出 JSON</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content: Smart Category & Auto Routing -->
+      <div id="tab-category" class="settings-tab-pane">
+        <div class="cookie-guide-banner glass-card">
+          <div class="guide-icon">📁</div>
+          <div class="guide-text">
+            <b>智能多维度文件自动化归档路由</b>
+            <p>开启后，下载任务将根据媒体类型与扩展名自动分流归档至指定子文件夹，告别下载目录杂乱无章。</p>
+          </div>
+        </div>
+
+        <div class="settings-switches-group" style="margin: 0 0 14px 0;">
+          <label class="ios-switch-row">
+            <input id="enableAutoCategory" type="checkbox" checked>
+            <span class="switch-slider"></span>
+            <span class="switch-label-text">✨ 开启智能自动分类归档 (Auto Routing)</span>
+          </label>
+        </div>
+
+        <div class="grid-form-2x2">
+          <label class="form-group">
+            <span class="form-label">🎬 影视视频子目录名称</span>
+            <input id="catVideoFolder" class="glass-input" value="Videos" placeholder="Videos">
+          </label>
+          <label class="form-group">
+            <span class="form-label">🎵 音频音乐子目录名称</span>
+            <input id="catAudioFolder" class="glass-input" value="Music" placeholder="Music">
+          </label>
+          <label class="form-group">
+            <span class="form-label">📦 压缩与安装包子目录</span>
+            <input id="catArchiveFolder" class="glass-input" value="Archives" placeholder="Archives">
+          </label>
+          <label class="form-group">
+            <span class="form-label">📄 文档电子书子目录</span>
+            <input id="catDocumentFolder" class="glass-input" value="Documents" placeholder="Documents">
+          </label>
+          <label class="form-group">
+            <span class="form-label">🖼️ 图片与相册子目录</span>
+            <input id="catPictureFolder" class="glass-input" value="Pictures" placeholder="Pictures">
+          </label>
+          <label class="form-group">
+            <span class="form-label">📦 其他未识别文件子目录</span>
+            <input id="catOtherFolder" class="glass-input" value="Others" placeholder="Others">
+          </label>
+        </div>
+      </div>
+
+      <!-- Tab Content: Bandwidth Time Scheduler -->
+      <div id="tab-schedule" class="settings-tab-pane">
+        <div class="cookie-guide-banner glass-card">
+          <div class="guide-icon">⏱️</div>
+          <div class="guide-text">
+            <b>全天候智能限速时段计划器 (峰谷带宽调度)</b>
+            <p>自定义高峰/工作时段限速避免抢占网络，低峰/夜间时段自动解除限制满速狂飙。</p>
+          </div>
+        </div>
+
+        <div class="settings-switches-group" style="margin: 0 0 14px 0;">
+          <label class="ios-switch-row">
+            <input id="enableTimeSchedule" type="checkbox">
+            <span class="switch-slider"></span>
+            <span class="switch-label-text">⏱️ 启用全天候时段智能限速计划</span>
+          </label>
+        </div>
+
+        <div class="grid-form-2x2">
+          <label class="form-group">
+            <span class="form-label">高峰限速时段 - 开始时间</span>
+            <input id="peakStartTime" class="glass-input" type="time" value="08:00">
+          </label>
+          <label class="form-group">
+            <span class="form-label">高峰限速时段 - 结束时间</span>
+            <input id="peakEndTime" class="glass-input" type="time" value="23:00">
+          </label>
+          <label class="form-group">
+            <span class="form-label">高峰时段下载速率限制 (KB/s)</span>
+            <input id="peakLimitKBps" class="glass-input" type="number" value="2048" placeholder="2048">
+          </label>
+          <label class="form-group">
+            <span class="form-label">低峰/夜间下载速率 (KB/s，0 = 不限速)</span>
+            <input id="offPeakLimitKBps" class="glass-input" type="number" value="0" placeholder="0">
+          </label>
+        </div>
+
+        <div class="naming-template-box glass-card" style="margin-top:10px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="status-pill ok" id="scheduleActiveStatusPill">计划器待命中</span>
+            <span style="font-size:12px; color:var(--text-secondary);" id="scheduleCurrentStatusText">当前速率策略将随时间自动平滑切换</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content 2: Network & Dedicated Proxy -->
+      <div id="tab-network" class="settings-tab-pane">
+        <div class="cookie-guide-banner glass-card">
+          <div class="guide-icon">🌐</div>
+          <div class="guide-text">
+            <b>网络专属代理与智能分流网关</b>
+            <p>为 YouTube、X/Twitter 等海外流媒体提供专属独立网络通道，一键选择常用客户端预设，免去手动输入端口的繁琐。</p>
+          </div>
+        </div>
+
+        <!-- Proxy Presets Grid -->
+        <div class="proxy-presets-grid" id="proxyPresetsGrid">
+          <!-- Preset 1: Direct -->
+          <div class="proxy-preset-card glass-card active" data-preset="direct">
+            <div class="preset-icon">🌐</div>
+            <div class="preset-info">
+              <b>直连模式 (Direct)</b>
+              <span>不使用代理，国内网络直连</span>
+            </div>
+            <div class="preset-check-radio"></div>
+          </div>
+
+          <!-- Preset 2: Clash / Mihomo -->
+          <div class="proxy-preset-card glass-card" data-preset="clash">
+            <div class="preset-icon">🚀</div>
+            <div class="preset-info">
+              <b>Clash / Mihomo</b>
+              <span>默认端口 HTTP 7890</span>
+            </div>
+            <div class="preset-check-radio"></div>
+          </div>
+
+          <!-- Preset 3: v2rayN / Xray -->
+          <div class="proxy-preset-card glass-card" data-preset="v2ray">
+            <div class="preset-icon">⚡</div>
+            <div class="preset-info">
+              <b>v2rayN / Xray</b>
+              <span>本地混合端口 10808 (HTTP)</span>
+            </div>
+            <div class="preset-check-radio"></div>
+          </div>
+
+          <!-- Preset 4: Shadowsocks -->
+          <div class="proxy-preset-card glass-card" data-preset="ss">
+            <div class="preset-icon">✈️</div>
+            <div class="preset-info">
+              <b>Shadowsocks</b>
+              <span>默认端口 SOCKS5 1080</span>
+            </div>
+            <div class="preset-check-radio"></div>
+          </div>
+
+          <!-- Preset 5: Follow Windows System -->
+          <div class="proxy-preset-card glass-card" data-preset="system">
+            <div class="preset-icon">🖥️</div>
+            <div class="preset-info">
+              <b>跟随 Windows 系统代理</b>
+              <span>自动继承系统全局设置</span>
+            </div>
+            <div class="preset-check-radio"></div>
+          </div>
+
+          <!-- Preset 6: Custom -->
+          <div class="proxy-preset-card glass-card" data-preset="custom">
+            <div class="preset-icon">🛠️</div>
+            <div class="preset-info">
+              <b>自定义高级代理</b>
+              <span>手动配置协议、IP与端口</span>
+            </div>
+            <div class="preset-check-radio"></div>
+          </div>
+        </div>
+
+        <!-- Proxy Detailed Config Card -->
+        <div class="proxy-detail-box glass-card" id="proxyDetailBox">
+          <div class="proxy-inputs-row">
+            <label class="form-group" style="width: 140px; flex: none;">
+              <span class="form-label">代理协议</span>
+              <div class="glass-select-wrapper">
+                <select id="proxyProtocol" class="glass-select">
+                  <option value="http">HTTP</option>
+                  <option value="socks5">SOCKS5</option>
+                  <option value="https">HTTPS</option>
+                </select>
+              </div>
+            </label>
+
+            <label class="form-group" style="flex: 1;">
+              <span class="form-label">代理服务器地址 (IP / Host)</span>
+              <input id="proxyHost" class="glass-input" value="127.0.0.1" placeholder="127.0.0.1">
+            </label>
+
+            <label class="form-group" style="width: 120px; flex: none;">
+              <span class="form-label">端口 (Port)</span>
+              <input id="proxyPort" class="glass-input" type="number" value="7890" placeholder="7890">
+            </label>
+          </div>
+
+          <!-- Quick Port Chips -->
+          <div class="quick-ports-bar">
+            <span class="quick-ports-label">常用端口快捷填入:</span>
+            <button type="button" class="port-chip" data-port="7890" data-proto="http">Clash (7890)</button>
+            <button type="button" class="port-chip" data-port="10808" data-proto="socks5">v2ray SOCKS (10808)</button>
+            <button type="button" class="port-chip" data-port="10809" data-proto="http">v2ray HTTP (10809)</button>
+            <button type="button" class="port-chip" data-port="1080" data-proto="socks5">SS (1080)</button>
+            <button type="button" class="port-chip" data-port="2080" data-proto="socks5">Singbox (2080)</button>
+          </div>
+
+          <!-- Proxy Latency Test & Routing Policy -->
+          <div class="proxy-test-bar">
+            <button type="button" class="liquid-btn primary-btn mini-btn" id="testProxyBtn">⚡ 立即测试代理连通性 (测速 YouTube)</button>
+            <span id="proxyTestStatus" class="proxy-test-pill">未测试</span>
+          </div>
+
+          <div class="proxy-routing-row">
+            <span class="form-label" style="margin-bottom: 6px;">智能分流策略:</span>
+            <div class="routing-pills-group">
+              <label class="routing-pill-label">
+                <input type="radio" name="proxyRouting" value="smart" checked>
+                <span>🧠 智能分流 (仅海外流媒体走代理，B站/国内直连)</span>
+              </label>
+              <label class="routing-pill-label">
+                <input type="radio" name="proxyRouting" value="global">
+                <span>🌍 全局代理 (所有下载全部经由代理通道)</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content 2: Cookies Management -->
+      <div id="tab-cookies" class="settings-tab-pane">
+        <div class="cookie-guide-banner glass-card">
+          <div class="guide-icon">✨</div>
+          <div class="guide-text">
+            <b>无需插件与文件 · 支持直接扫码 / 快捷登录直连</b>
+            <p>点击「扫码登录」或「快捷登录」即可在内嵌窗口中登录账号，下载器将自动无感同步并保存会员与身份凭据；亦支持传统导入 <code>cookies.txt</code> 文件。</p>
+          </div>
+        </div>
+
+        <!-- Platform Cookie Cards Grid -->
+        <div class="cookie-platforms-grid" id="cookiePlatformsGrid">
+          <!-- Bilibili Card -->
+          <div class="cookie-card glass-card" data-site="bilibili">
+            <div class="platform-info">
+              <div class="platform-badge bili">B</div>
+              <div>
+                <b>哔哩哔哩 (Bilibili)</b>
+                <span class="cookie-status-text" id="status-bilibili">未配置</span>
+              </div>
+            </div>
+            <div class="cookie-card-actions">
+              <button class="liquid-btn primary-btn mini-btn login-cookie-btn" data-site="bilibili">📱 扫码登录</button>
+              <button class="glass-btn mini-btn import-cookie-btn" data-site="bilibili">导入 txt</button>
+              <button class="glass-btn mini-btn danger-btn delete-cookie-btn hidden" data-site="bilibili">清除</button>
+            </div>
+          </div>
+
+          <!-- YouTube Card -->
+          <div class="cookie-card glass-card" data-site="youtube">
+            <div class="platform-info">
+              <div class="platform-badge yt">YT</div>
+              <div>
+                <b>YouTube</b>
+                <span class="cookie-status-text" id="status-youtube">未配置</span>
+              </div>
+            </div>
+            <div class="cookie-card-actions">
+              <button class="liquid-btn primary-btn mini-btn login-cookie-btn" data-site="youtube">📱 快捷登录</button>
+              <button class="glass-btn mini-btn import-cookie-btn" data-site="youtube">导入 txt</button>
+              <button class="glass-btn mini-btn danger-btn delete-cookie-btn hidden" data-site="youtube">清除</button>
+            </div>
+          </div>
+
+          <!-- Douyin / TikTok Card -->
+          <div class="cookie-card glass-card" data-site="douyin">
+            <div class="platform-info">
+              <div class="platform-badge dy">DY</div>
+              <div>
+                <b>抖音 / TikTok</b>
+                <span class="cookie-status-text" id="status-douyin">未配置</span>
+              </div>
+            </div>
+            <div class="cookie-card-actions">
+              <button class="liquid-btn primary-btn mini-btn login-cookie-btn" data-site="douyin">📱 扫码登录</button>
+              <button class="glass-btn mini-btn import-cookie-btn" data-site="douyin">导入 txt</button>
+              <button class="glass-btn mini-btn danger-btn delete-cookie-btn hidden" data-site="douyin">清除</button>
+            </div>
+          </div>
+
+          <!-- X / Twitter Card -->
+          <div class="cookie-card glass-card" data-site="x">
+            <div class="platform-info">
+              <div class="platform-badge tw">𝕏</div>
+              <div>
+                <b>X (Twitter)</b>
+                <span class="cookie-status-text" id="status-x">未配置</span>
+              </div>
+            </div>
+            <div class="cookie-card-actions">
+              <button class="liquid-btn primary-btn mini-btn login-cookie-btn" data-site="x">📱 快捷登录</button>
+              <button class="glass-btn mini-btn import-cookie-btn" data-site="x">导入 txt</button>
+              <button class="glass-btn mini-btn danger-btn delete-cookie-btn hidden" data-site="x">清除</button>
+            </div>
+          </div>
+
+          <!-- Telegram Card -->
+          <div class="cookie-card glass-card" data-site="telegram">
+            <div class="platform-info">
+              <div class="platform-badge tg">✈️</div>
+              <div>
+                <b>Telegram (纸飞机)</b>
+                <span class="cookie-status-text" id="status-telegram">未配置</span>
+              </div>
+            </div>
+            <div class="cookie-card-actions">
+              <button class="liquid-btn primary-btn mini-btn login-cookie-btn" data-site="telegram">📱 扫码/授权登录</button>
+              <button class="glass-btn mini-btn import-cookie-btn" data-site="telegram">导入凭据</button>
+              <button class="glass-btn mini-btn danger-btn delete-cookie-btn hidden" data-site="telegram">清除</button>
+            </div>
+          </div>
+
+          <!-- Instagram Card -->
+          <div class="cookie-card glass-card" data-site="instagram">
+            <div class="platform-info">
+              <div class="platform-badge ig">IG</div>
+              <div>
+                <b>Instagram (Ins)</b>
+                <span class="cookie-status-text" id="status-instagram">未配置</span>
+              </div>
+            </div>
+            <div class="cookie-card-actions">
+              <button class="liquid-btn primary-btn mini-btn login-cookie-btn" data-site="instagram">📱 快捷登录</button>
+              <button class="glass-btn mini-btn import-cookie-btn" data-site="instagram">导入 txt</button>
+              <button class="glass-btn mini-btn danger-btn delete-cookie-btn hidden" data-site="instagram">清除</button>
+            </div>
+          </div>
+
+          <!-- Pornhub Card -->
+          <div class="cookie-card glass-card" data-site="pornhub">
+            <div class="platform-info">
+              <div class="platform-badge ph">PH</div>
+              <div>
+                <b>Pornhub</b>
+                <span class="cookie-status-text" id="status-pornhub">未配置</span>
+              </div>
+            </div>
+            <div class="cookie-card-actions">
+              <button class="liquid-btn primary-btn mini-btn login-cookie-btn" data-site="pornhub">📱 快捷登录</button>
+              <button class="glass-btn mini-btn import-cookie-btn" data-site="pornhub">导入 txt</button>
+              <button class="glass-btn mini-btn danger-btn delete-cookie-btn hidden" data-site="pornhub">清除</button>
+            </div>
+          </div>
+
+          <!-- General Fallback Card -->
+          <div class="cookie-card glass-card" data-site="general">
+            <div class="platform-info">
+              <div class="platform-badge gen">🌐</div>
+              <div>
+                <b>通用站点兜底凭据 (General)</b>
+                <span class="cookie-status-text" id="status-general">未配置</span>
+              </div>
+            </div>
+            <div class="cookie-card-actions">
+              <button class="glass-btn mini-btn import-cookie-btn" data-site="general">导入 cookies.txt</button>
+              <button class="glass-btn mini-btn danger-btn delete-cookie-btn hidden" data-site="general">清除</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content 3: Engine & Diagnostic -->
+      <div id="tab-engine" class="settings-tab-pane">
+        <section class="kernel-diagnostic-card glass-card">
+          <div class="kernel-text">
+            <b data-i18n="kernelTitle">下载内核健康状态</b>
+            <p data-i18n="kernelBody">实时验证本地下载分片引擎、yt-dlp 与 FFmpeg 运行库可用性。</p>
+          </div>
+          <div class="kernel-btn-row">
+            <button class="glass-btn mini-btn" id="updateYtDlpBtn">在线升级 yt-dlp</button>
+            <button class="liquid-btn primary-btn mini-btn" id="checkTools" data-i18n="checkTools">立即运行诊断</button>
+          </div>
+        </section>
+
+        <div id="kernelDetails" class="kernel-details-box glass-card">
+          <div class="kernel-detail-row">
+            <span>Sparse File HTTP 分片引擎</span>
+            <span class="status-pill ok">内置就绪</span>
+          </div>
+          <div class="kernel-detail-row">
+            <span>yt-dlp 视频解析内核</span>
+            <span class="status-pill wait" id="kernelYtDlpStatus">未检测</span>
+          </div>
+          <div class="kernel-detail-row">
+            <span>FFmpeg 格式混流转码器</span>
+            <span class="status-pill wait" id="kernelFfmpegStatus">未检测</span>
+          </div>
+          <div class="kernel-detail-row">
+            <span>🧲 BitTorrent 全球最佳 Trackers 加速池</span>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="status-pill ok" id="trackersCountBadge">35+ 个节点就绪</span>
+              <button type="button" class="glass-btn mini-btn" id="updateTrackersBtn" style="padding:2px 8px; font-size:11px;">🔄 同步最新</button>
+            </div>
+          </div>
+        </div>
+
+        <label class="form-group">
+          <span class="form-label">yt-dlp 可执行文件路径 (留空使用自带)</span>
+          <input id="ytDlpPath" class="glass-input" placeholder="默认使用 tools/yt-dlp.exe">
+        </label>
+
+        <label class="form-group">
+          <span class="form-label">FFmpeg 可执行文件路径 (留空使用自带)</span>
+          <input id="ffmpegPath" class="glass-input" placeholder="默认使用 tools/ffmpeg.exe">
+        </label>
+      </div>
+
+      <!-- Tab Content: Browser Integration & Extensions -->
+      <div id="tab-browser" class="settings-tab-pane">
+        <div class="cookie-guide-banner glass-card">
+          <div class="guide-icon">🧩</div>
+          <div class="guide-text">
+            <b>浏览器一键拦截生态 (Chrome / Edge / 360 / 油猴)</b>
+            <p>支持 Chrome/Edge 原生 Manifest V3 扩展程序与油猴脚本，网页右键或视频浮窗直接一键投递至全能下载器。</p>
+          </div>
+        </div>
+
+        <!-- Chrome / Edge Extension Box -->
+        <div class="browser-bridge-card glass-card" style="margin-bottom:14px;">
+          <div class="bridge-card-header">
+            <div class="bridge-title-group">
+              <div class="bridge-icon-pill" style="background:linear-gradient(135deg,#0071e3,#00f2fe);">CRX</div>
+              <div>
+                <b>Chrome / Edge 原生扩展 (Manifest V3)</b>
+                <span class="bridge-sub">支持全网右键菜单拦截、网页视频悬浮极速投递胶囊</span>
+              </div>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button type="button" class="liquid-btn primary-btn mini-btn" id="exportExtensionBtn">📦 导出扩展程序</button>
+              <button type="button" class="glass-btn mini-btn" id="openExtensionGuideBtn">🧭 安装指南</button>
+            </div>
+          </div>
+
+          <div class="bridge-steps-grid">
+            <div class="bridge-step-card">
+              <span class="bridge-step-num">1</span>
+              <div class="bridge-step-desc">点击右上角 <b>「导出扩展程序」</b> 获取已解压文件夹</div>
+            </div>
+            <div class="bridge-step-card">
+              <span class="bridge-step-num">2</span>
+              <div class="bridge-step-desc">浏览器打开 <code>chrome://extensions</code> 开启 <b>开发者模式</b></div>
+            </div>
+            <div class="bridge-step-card">
+              <span class="bridge-step-num">3</span>
+              <div class="bridge-step-desc">点击 <b>「加载已解压的扩展程序」</b> 选择导出文件夹即可</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tampermonkey Script Box -->
+        <div class="browser-bridge-card glass-card">
+          <div class="bridge-card-header">
+            <div class="bridge-title-group">
+              <div class="bridge-icon-pill">JS</div>
+              <div>
+                <b>Tampermonkey / Violentmonkey 网页投递脚本</b>
+                <span class="bridge-sub">支持 B站、YouTube、抖音、Twitter/X、Telegram 等全网主流网站</span>
+              </div>
+            </div>
+            <button class="liquid-btn primary-btn mini-btn" id="copyUserscriptBtn" style="white-space:nowrap; flex-shrink:0;">📋 一键复制油猴脚本</button>
+          </div>
+
+          <div class="bridge-steps-grid">
+            <div class="bridge-step-card">
+              <span class="bridge-step-num">1</span>
+              <div class="bridge-step-desc">在浏览器中安装 <b>Tampermonkey</b> 扩展</div>
+            </div>
+            <div class="bridge-step-card">
+              <span class="bridge-step-num">2</span>
+              <div class="bridge-step-desc">点击上方 <b>「复制脚本」</b> 并在油猴中新建脚本粘贴保存</div>
+            </div>
+            <div class="bridge-step-card">
+              <span class="bridge-step-num">3</span>
+              <div class="bridge-step-desc">打开任意视频播放页，点击右下角浮动胶囊 <b>一键直连投递</b></div>
+            </div>
+          </div>
+
+          <div class="script-code-box">
+            <pre id="userscriptCodeDisplay">正在生成脚本代码...</pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="glass-btn secondary-btn" id="cancelSettings" data-i18n="cancel">取消</button>
+        <button class="liquid-btn primary-btn" id="saveSettings" data-i18n="save">保存并应用</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Playlist / Multi-P Batch Selector Modal -->
+  <div id="playlistModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="glass-modal-card playlist-modal">
+      <button class="modal-close-btn" id="closePlaylist" aria-label="Close modal">×</button>
+      
+      <div class="modal-header">
+        <span class="modal-kicker">PLAYLIST / MULTI-P HARVESTER</span>
+        <h2 id="playlistTitle">合集批量解析</h2>
+        <div class="playlist-quick-bar">
+          <span class="playlist-count-pill" id="playlistTotalCount">共 0 集</span>
+          <div class="quick-select-buttons">
+            <button type="button" class="glass-btn mini-btn" id="btnSelectAll">全选</button>
+            <button type="button" class="glass-btn mini-btn" id="btnSelectInverse">反选</button>
+            <button type="button" class="glass-btn mini-btn" id="btnSelectTop10">前 10 集</button>
+            <button type="button" class="glass-btn mini-btn" id="btnSelectTop30">前 30 集</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="playlist-search-wrap">
+        <input id="playlistSearchInput" class="glass-input" placeholder="搜索分集标题或序号...">
+      </div>
+
+      <div class="playlist-episodes-container" id="playlistEpisodesList">
+        <!-- Dynamically injected episode rows -->
+      </div>
+
+      <div class="playlist-footer-bar">
+        <div class="playlist-footer-info">
+          已选中 <b id="playlistSelectedCount" class="text-accent">0</b> / <span id="playlistAllCount">0</span> 集
+        </div>
+        <div class="playlist-footer-actions">
+          <button class="glass-btn secondary-btn" id="cancelPlaylist">取消</button>
+          <button class="liquid-btn primary-btn" id="confirmPlaylistDownload">批量添加到队列</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 4: File Hash & Integrity Checker Modal -->
+  <div id="hashModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="glass-modal-card hash-modal">
+      <button class="modal-close-btn" id="closeHash" aria-label="Close modal">×</button>
+      
+      <div class="modal-header">
+        <span class="modal-kicker">CHECKSUM VERIFIER</span>
+        <h2>文件完整性校验</h2>
+        <p id="hashFileName" class="hash-filename-text">filename.zip</p>
+      </div>
+
+      <div class="hash-body">
+        <div class="hash-field-card glass-card">
+          <div class="hash-field-label">
+            <span>MD5 校验值</span>
+            <button type="button" class="glass-btn mini-btn copy-hash-btn" data-target="hashMd5Value">复制</button>
+          </div>
+          <div class="hash-value-code" id="hashMd5Value">计算中...</div>
+        </div>
+
+        <div class="hash-field-card glass-card">
+          <div class="hash-field-label">
+            <span>SHA-1 校验值</span>
+            <button type="button" class="glass-btn mini-btn copy-hash-btn" data-target="hashSha1Value">复制</button>
+          </div>
+          <div class="hash-value-code" id="hashSha1Value">计算中...</div>
+        </div>
+
+        <div class="hash-field-card glass-card">
+          <div class="hash-field-label">
+            <span>SHA-256 校验值</span>
+            <button type="button" class="glass-btn mini-btn copy-hash-btn" data-target="hashSha256Value">复制</button>
+          </div>
+          <div class="hash-value-code" id="hashSha256Value">计算中...</div>
+        </div>
+
+        <div class="hash-compare-section">
+          <label class="form-group">
+            <span class="form-label">粘贴官方/目标哈希值进行智能比对</span>
+            <input id="hashCompareInput" class="glass-input" placeholder="粘贴 MD5 或 SHA-256 哈希字符串...">
+          </label>
+          <div id="hashCompareResult" class="hash-result-badge hidden">
+            <!-- Dynamic comparison status -->
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="liquid-btn primary-btn" id="closeHashBtn">完成</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 5: Liquid Glass Video & Audio Preview Player -->
+  <div id="previewModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="glass-modal-card preview-modal-card">
+      <button class="modal-close-btn" id="closePreview" aria-label="Close modal">×</button>
+      
+      <div class="preview-modal-header">
+        <div class="preview-title-wrap">
+          <span class="preview-format-badge" id="previewFormatBadge">4K MP4</span>
+          <h3 class="preview-title-text" id="previewTitleText">媒体预览</h3>
+        </div>
+      </div>
+
+      <div class="preview-player-container">
+        <video id="previewVideoPlayer" class="preview-video-element" controls playsinline></video>
+        
+        <div id="previewAudioWrap" class="preview-audio-wrap hidden">
+          <div class="vinyl-disc-container">
+            <div class="vinyl-disc-rotating" id="vinylDisc">
+              <img id="previewAudioCover" class="vinyl-cover-img" src="" alt="Cover">
+            </div>
+          </div>
+          <audio id="previewAudioPlayer" class="preview-audio-element" controls></audio>
+        </div>
+      </div>
+
+      <div class="preview-modal-footer">
+        <span id="previewFileInfo" class="preview-file-info">准备就绪</span>
+        <button type="button" class="glass-btn secondary-btn mini-btn" id="previewLocateBtn">📂 在文件夹中定位</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 6: Mobile Cast QR Code Modal -->
+  <div id="mobileCastModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="glass-modal-card mobile-cast-card">
+      <button class="modal-close-btn" id="closeMobileCast" aria-label="Close modal">×</button>
+      <div class="modal-header" style="text-align:center;">
+        <span class="modal-kicker">LAN MOBILE REMOTE</span>
+        <h2>📱 手机扫码无线投递</h2>
+        <p style="font-size:12px; color:var(--text-secondary); margin-top:4px;">使用手机（与电脑连接同一 Wi-Fi）微信或相机扫码，即可在手机上直接粘贴链接让电脑高速下载！</p>
+      </div>
+      <div class="mobile-cast-body">
+        <div class="qr-code-wrapper" id="qrcodeContainer">
+          <canvas id="qrCanvas" width="180" height="180"></canvas>
+        </div>
+        <div class="lan-address-box">
+          <span style="font-size:11.5px; color:var(--text-secondary);">局域网直连网址:</span>
+          <code id="lanUrlText" style="font-family:var(--font-mono); font-size:13px; font-weight:700; color:#00f2fe;">http://192.168.1.x:19876/</code>
+          <button type="button" class="glass-btn mini-btn" id="copyLanUrlBtn">复制网址</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 7: Video Lossless Trimmer & High-Res GIF Maker Modal -->
+  <div id="trimModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="glass-modal-card trim-modal-card">
+      <button class="modal-close-btn" id="closeTrim" aria-label="Close modal">×</button>
+      <div class="modal-header">
+        <span class="modal-kicker">FFMPEG LOSSLESS STUDIO</span>
+        <h2>🎞️ 视频无损截取与 GIF 动图生成</h2>
+        <p id="trimFileName" style="font-size:12px; color:var(--text-secondary); margin-top:4px;">filename.mp4</p>
+      </div>
+      <div class="trim-body">
+        <div class="trim-video-wrap">
+          <video id="trimVideoPlayer" controls playsinline style="width:100%; max-height:260px; background:#000; border-radius:12px;"></video>
+        </div>
+        <div class="trim-controls-grid">
+          <label class="form-group">
+            <span class="form-label">开始时间 (秒/格式 00:00:00)</span>
+            <div class="row-input-group">
+              <input id="trimStartTime" class="glass-input" value="00:00:00">
+              <button type="button" class="glass-btn mini-btn" id="setStartCurrentBtn">设为当前</button>
+            </div>
+          </label>
+          <label class="form-group">
+            <span class="form-label">结束时间 (秒/格式 00:00:10)</span>
+            <div class="row-input-group">
+              <input id="trimEndTime" class="glass-input" value="00:00:10">
+              <button type="button" class="glass-btn mini-btn" id="setEndCurrentBtn">设为当前</button>
+            </div>
+          </label>
+        </div>
+        <div class="trim-actions-row">
+          <button type="button" class="liquid-btn primary-btn" id="doTrimMp4Btn">✂️ 0.1秒无损截取 MP4 (Stream Copy)</button>
+          <button type="button" class="glass-btn" id="doExportGifBtn" style="border-color:rgba(0,198,255,0.4); color:#00f2fe;">🎞️ 导出高清 GIF 动图</button>
+        </div>
+        <div id="trimProgressText" class="trim-status-text hidden">⚡ 正在极速处理中，请稍候...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Smart Floating Clipboard Quick-Action Toast Capsule -->
+  <div id="clipboardBubble" class="clipboard-bubble hidden">
+    <div class="bubble-icon">✨</div>
+    <div class="bubble-info" id="bubbleInfoArea" style="cursor:pointer;" title="点击呼出主窗口进行智能解析与设置">
+      <b id="bubbleTitle">捕获到视频链接</b>
+      <span id="bubbleUrl" class="bubble-url-text">https://...</span>
+    </div>
+    <div class="bubble-actions">
+      <button type="button" class="bubble-btn primary" id="bubbleDownloadVideo">🎬 智能透析下载</button>
+      <button type="button" class="bubble-btn audio" id="bubbleDownloadAudio">🎵 提取MP3</button>
+      <button type="button" class="bubble-btn close" id="bubbleClose">✕</button>
+    </div>
+  </div>
+
+  <!-- Modal 8: Refresh Expired Download URL Modal (换链续传) -->
+  <div id="refreshUrlModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="glass-modal-card refresh-url-card">
+      <button class="modal-close-btn" id="closeRefreshUrl" aria-label="Close modal">×</button>
+      <div class="modal-header">
+        <span class="modal-kicker">SEAMLESS RESUME</span>
+        <h2>🔄 换链续传 (更新下载链接)</h2>
+        <p id="refreshUrlTaskTitle" style="font-size:12px; color:var(--text-secondary); margin-top:4px;">任务名称</p>
+      </div>
+      <div class="modal-body">
+        <div class="cookie-guide-banner glass-card" style="margin-bottom:12px; padding:10px 14px;">
+          <div class="guide-icon">💡</div>
+          <div class="guide-text">
+            <b>0 进度损耗无缝续传</b>
+            <p>适用于网盘直链、OneDrive 或防盗链超时失效场景。粘贴最新直链后，内核将在原有已下载分片基础上接着下载！</p>
+          </div>
+        </div>
+        <label class="form-group">
+          <span class="form-label">新的有效下载直链 (New URL)</span>
+          <textarea id="newUrlInput" class="glass-input" rows="3" placeholder="在此粘贴最新获取的有效直链..."></textarea>
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button class="glass-btn secondary-btn" id="cancelRefreshUrlBtn">取消</button>
+        <button class="liquid-btn primary-btn" id="confirmRefreshUrlBtn">🚀 立即更新并无缝续传</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 9: Torrent & Magnet Multi-File Selection Modal (磁力/种子选集) -->
+  <div id="torrentModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="glass-modal-card large-modal torrent-modal-card">
+      <button class="modal-close-btn" id="closeTorrentModal" aria-label="Close modal">×</button>
+      <div class="modal-header">
+        <span class="modal-kicker">BITTORRENT & MAGNET</span>
+        <h2>🧲 磁力链接 / 种子多文件智能选集</h2>
+        <p>支持秒级元数据解析，勾选您需要下载的指定文件、剧集或格式。</p>
+      </div>
+      <div class="modal-body">
+        <div class="torrent-input-bar">
+          <input id="torrentInput" class="glass-input" placeholder="粘贴 magnet:?xt=urn:btih:... 磁力链接或点击右侧选择种子文件">
+          <button type="button" class="glass-btn secondary-btn" id="pickTorrentBtn" style="white-space:nowrap;">📁 选择种子</button>
+          <button type="button" class="liquid-btn primary-btn" id="parseTorrentBtn" style="white-space:nowrap;">🔍 解析内容</button>
+        </div>
+        <div id="torrentMetaCard" class="torrent-meta-card glass-card hidden">
+          <div class="torrent-name-row">
+            <b id="torrentTitle">种子名称</b>
+            <span id="torrentTotalSize" class="sniff-size-pill">0 MB</span>
+          </div>
+          <div class="torrent-quick-bar">
+            <span class="playlist-count-pill">包含 <b id="torrentFileCount">0</b> 个文件 (已选 <b id="torrentSelectedCount">0</b> 项)</span>
+            <div class="quick-select-buttons">
+              <button type="button" class="glass-btn mini-btn" id="selectTorrentAll">全选</button>
+              <button type="button" class="glass-btn mini-btn" id="selectTorrentVideoOnly">仅选视频</button>
+              <button type="button" class="glass-btn mini-btn" id="selectTorrentNone">清空选择</button>
+            </div>
+          </div>
+          <div class="torrent-files-list" id="torrentFilesList"></div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="glass-btn secondary-btn" id="cancelTorrentBtn">取消</button>
+        <button class="liquid-btn primary-btn" id="startTorrentDownloadBtn">🚀 建立并发传输任务</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 10: Web Media Stream Sniffer Controller (网页流媒体透视嗅探器) -->
+  <div id="webSnifferModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="glass-modal-card large-modal sniffer-modal-card">
+      <button class="modal-close-btn" id="closeWebSnifferModal" aria-label="Close modal">×</button>
+      <div class="modal-header">
+        <span class="modal-kicker">NETWORK STREAM & ASSET INSPECTOR</span>
+        <h2>⚡ 网页流媒体与全站素材透视嗅探器</h2>
+        <p>输入网页地址唤醒内置液态浏览器，自动穿透嗅探底层加密 m3u8、ts 分片、视频直链或一键提取全站原图素材与壁纸。</p>
+      </div>
+      <div class="modal-body">
+        <div class="sniffer-launch-bar">
+          <input id="webSnifferUrlInput" class="glass-input" placeholder="输入任意视频或图片网页 URL (如 https://www.bilibili.com/video/...)">
+          <button type="button" class="liquid-btn primary-btn" id="launchSnifferBrowserBtn" style="white-space:nowrap;">🌐 启动嗅探浏览器</button>
+        </div>
+
+        <!-- Sniffer Sub-Tabs -->
+        <div class="sniffer-subtabs-row">
+          <button type="button" class="sniffer-subtab active" id="subtabStreams" data-tab="streams">⚡ 媒体直链与分片 (<span id="sniffedCount">0</span>)</button>
+          <button type="button" class="sniffer-subtab" id="subtabAssets" data-tab="assets">🖼️ 全站素材与原图采集 (<span id="scrapedAssetsCount">0</span>)</button>
+        </div>
+
+        <!-- Tab 1: Live Streams -->
+        <div id="snifferPaneStreams" class="sniffer-pane active">
+          <div class="sniffer-streams-wrap glass-card">
+            <div class="sniffer-streams-header">
+              <b>⚡ 实时捕获流媒体清单</b>
+              <span style="font-size:11px; color:var(--text-tertiary);">在内置浏览器中播放视频，直链将在此处自动浮现</span>
+            </div>
+            <div id="sniffedStreamsList" class="sniffer-streams-list">
+              <div class="empty-hint-text">暂无捕获到的媒体流，请在上方输入网址并启动浏览器播放视频</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Asset Scraper -->
+        <div id="snifferPaneAssets" class="sniffer-pane hidden">
+          <div class="asset-scraper-wrap glass-card">
+            <div class="asset-scraper-toolbar">
+              <button type="button" class="liquid-btn primary-btn mini-btn" id="scrapePageAssetsBtn">🔍 一键抓取当前页面素材</button>
+              <div class="asset-filter-chips">
+                <button type="button" class="asset-filter-chip active" data-filter="all">全部</button>
+                <button type="button" class="asset-filter-chip" data-filter="image">🖼️ 图片壁纸</button>
+                <button type="button" class="asset-filter-chip" data-filter="video">🎬 视频</button>
+                <button type="button" class="asset-filter-chip" data-filter="document">📄 文档/压缩包</button>
+              </div>
+              <div class="asset-quick-select">
+                <button type="button" class="glass-btn mini-btn" id="selectAllAssetsBtn">全选</button>
+                <button type="button" class="glass-btn mini-btn" id="deselectAllAssetsBtn">清空</button>
+              </div>
+            </div>
+            <div id="scrapedAssetsGrid" class="scraped-assets-grid">
+              <div class="empty-hint-text">点击「一键抓取当前页面素材」，即刻提取当前页面高清大图与资源</div>
+            </div>
+            <div class="asset-scraper-footer">
+              <span id="selectedAssetSummary">已选中 <b id="selectedAssetNum">0</b> 项素材</span>
+              <button type="button" class="liquid-btn primary-btn" id="downloadSelectedAssetsBtn" disabled>📦 批量下载已选素材</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 11: Lossless Media Format Converter (无损格式转换与音频提取) -->
+  <div id="convertModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="glass-modal-card convert-modal-card">
+      <button class="modal-close-btn" id="closeConvertModal" aria-label="Close modal">×</button>
+      <div class="modal-header">
+        <span class="modal-kicker">LOSSLESS CONVERTER & EXTRACTOR</span>
+        <h2>🔄 无损格式转换与纯音频提取</h2>
+        <p>利用内置极速混流内核，秒级转换视频封装格式或高保真提取 320kbps MP3 / FLAC 音频。</p>
+      </div>
+      <div class="modal-body">
+        <div class="convert-source-card glass-card">
+          <div class="convert-file-icon">🎬</div>
+          <div class="convert-file-info">
+            <b id="convertSourceTitle">source_video.webm</b>
+            <div class="convert-file-meta">
+              <span>原始大小: <b id="convertSourceSize">0 MB</b></span>
+              <span id="convertSourcePath" class="convert-path-text">C:/...</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="convert-format-section">
+          <span class="form-label" style="margin-bottom:8px; display:block;">选择目标转换格式 (Target Format)</span>
+          <div class="convert-format-grid" id="convertFormatOptions">
+            <label class="convert-format-card active" data-format="mp4">
+              <input type="radio" name="targetFormat" value="mp4" checked>
+              <div class="format-card-content">
+                <span class="format-badge mp4">MP4</span>
+                <b>全兼容视频 (MP4)</b>
+                <p>H.264 + AAC 编码，车载、电视、手机与剪辑软件 100% 顺畅播放</p>
+              </div>
+            </label>
+            <label class="convert-format-card" data-format="mp3">
+              <input type="radio" name="targetFormat" value="mp3">
+              <div class="format-card-content">
+                <span class="format-badge mp3">MP3</span>
+                <b>高保真音频 (MP3 320k)</b>
+                <p>一键提取 320kbps 极高音质纯音频文件，听歌车载必备</p>
+              </div>
+            </label>
+            <label class="convert-format-card" data-format="flac">
+              <input type="radio" name="targetFormat" value="flac">
+              <div class="format-card-content">
+                <span class="format-badge flac">FLAC</span>
+                <b>无损母带音频 (FLAC)</b>
+                <p>无损保留音频全部高频细节，发烧级原声享受</p>
+              </div>
+            </label>
+            <label class="convert-format-card" data-format="aac">
+              <input type="radio" name="targetFormat" value="aac">
+              <div class="format-card-content">
+                <span class="format-badge aac">AAC</span>
+                <b>纯净苹果格式 (AAC 256k)</b>
+                <p>Apple 设备原生最佳编码格式，小体积高音质</p>
+              </div>
+            </label>
+            <label class="convert-format-card" data-format="mkv">
+              <input type="radio" name="targetFormat" value="mkv">
+              <div class="format-card-content">
+                <span class="format-badge mkv">MKV</span>
+                <b>无损封装封装 (MKV)</b>
+                <p>零转码损耗秒级封装为 MKV 容器</p>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="settings-switches-group" style="margin: 12px 0 0 0;">
+          <label class="ios-switch-row">
+            <input id="convertLoudnorm" type="checkbox" checked>
+            <span class="switch-slider"></span>
+            <span class="switch-label-text">🔊 开启工业级 EBU R128 响度平滑均衡（标准化声压，彻底消除忽大忽小）</span>
+          </label>
+        </div>
+
+        <div id="convertProgressWrap" class="convert-progress-wrap hidden">
+          <div class="convert-progress-bar-bg">
+            <div id="convertProgressBar" class="convert-progress-bar-fill"></div>
+          </div>
+          <div id="convertStatusText" class="convert-status-text">⚡ 正在极速转码处理中，请稍候...</div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="glass-btn secondary-btn" id="cancelConvertBtn">取消</button>
+        <button class="liquid-btn primary-btn" id="startConvertBtn">🚀 开始极速转换</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 12: Clipboard History Vault Drawer (剪贴板时光备忘箱) -->
+  <div id="clipboardHistoryModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="glass-modal-card large-modal history-modal-card">
+      <button class="modal-close-btn" id="closeClipboardHistoryModal" aria-label="Close modal">×</button>
+      <div class="modal-header">
+        <span class="modal-kicker">CLIPBOARD MEMORY VAULT</span>
+        <h2>📋 剪贴板时光备忘箱</h2>
+        <p>自动收录近期复制捕获过的多媒体与下载链接，支持随时一键找回、批量打包加入下载或管理历史。</p>
+      </div>
+      <div class="modal-body">
+        <div class="history-toolbar">
+          <input id="historySearchInput" class="glass-input" placeholder="🔍 搜索历史链接或标题...">
+          <div class="history-stats">
+            <span>已收录 <b id="historyTotalCount">0</b> 条链接</span>
+          </div>
+        </div>
+        <div id="clipboardHistoryList" class="clipboard-history-list">
+          <div class="empty-hint-text">暂无收录的剪贴板历史链接，复制网页视频或下载直链后将自动在此处沉淀</div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="glass-btn secondary-btn text-danger" id="clearAllHistoryBtn">🧹 清空备忘箱</button>
+        <button class="glass-btn secondary-btn" id="closeHistoryBtn">关闭</button>
+        <button class="liquid-btn primary-btn" id="batchDownloadHistoryBtn">🚀 一键全部批量下载</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Liquid Batch Action Bar -->
+  <div id="batchActionBar" class="batch-action-bar hidden">
+    <div class="batch-bar-content">
+      <div class="batch-meta">
+        <span class="batch-count-pill">已选 <b id="batchSelectedCount">0</b> 项</span>
+      </div>
+      <div class="batch-buttons">
+        <button type="button" class="glass-btn mini-btn" id="batchPauseBtn">⏸️ 批量暂停</button>
+        <button type="button" class="glass-btn mini-btn" id="batchResumeBtn">▶️ 批量继续</button>
+        <button type="button" class="glass-btn mini-btn text-danger" id="batchDeleteBtn">🗑️ 批量移除</button>
+        <label class="batch-delete-file-label">
+          <input type="checkbox" id="batchDeleteFileCheck">
+          <span>同时删除本地文件</span>
+        </label>
+        <button type="button" class="glass-btn mini-btn" id="batchCancelBtn">✕</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 13: Author & Business Cooperation Modal -->
+  <div id="contactAuthorModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="glass-modal-card contact-modal-card">
+      <button class="modal-close-btn" id="closeContactAuthor" aria-label="Close modal">×</button>
+      <div class="modal-header" style="text-align: center;">
+        <span class="modal-kicker">AUTHOR & BUSINESS COOPERATION</span>
+        <h2>💬 联系作者 · 商务定制与支持</h2>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">官方直连支持通道 · 功能定制 · 企业部署 · 技术交流</p>
+      </div>
+
+      <div class="contact-modal-body">
+        <!-- Trio Contacts Grid: WhatsApp & Telegram & Gmail -->
+        <div class="contact-channels-grid">
+          <!-- WhatsApp Emerald Highlight Card -->
+          <div class="whatsapp-card glass-card">
+            <div class="whatsapp-badge-icon">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="#fff"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+            </div>
+            <div class="whatsapp-info">
+              <span class="whatsapp-title">WhatsApp 官方直联</span>
+              <div class="whatsapp-number-row">
+                <span class="whatsapp-number" id="whatsappNumberText">+1 (249) 897-8869</span>
+                <button type="button" class="glass-btn mini-btn" id="copyWhatsappBtn" style="border-color: rgba(37,211,102,0.4); color: #25d366;">📋 复制</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Telegram Sky Blue Highlight Card -->
+          <div class="telegram-card glass-card">
+            <div class="telegram-badge-icon">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="#fff"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.05-.2-.06-.06-.15-.04-.22-.02-.09.02-1.61 1.03-4.55 3.01-.43.3-.82.44-1.17.43-.39-.01-1.13-.22-1.68-.4-.68-.22-1.22-.34-1.17-.72.03-.2.3-.4.82-.62 3.22-1.4 5.37-2.33 6.45-2.78 3.07-1.28 3.71-1.5 4.13-1.51.09 0 .3.02.44.13.11.09.15.22.16.32-.01.07-.01.19-.02.28z"/></svg>
+            </div>
+            <div class="telegram-info">
+              <span class="telegram-title" style="color: #29b6f6; font-size: 10.5px; font-weight: 700; text-transform: uppercase;">Telegram (纸飞机)</span>
+              <div class="whatsapp-number-row">
+                <span class="whatsapp-number" id="telegramNumberText">@woeken318</span>
+                <button type="button" class="glass-btn mini-btn" id="copyTelegramBtn" style="border-color: rgba(41,182,246,0.4); color: #29b6f6;">📋 复制</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Gmail Ruby Highlight Card -->
+          <div class="gmail-card glass-card">
+            <div class="gmail-badge-icon">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="#fff"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+            </div>
+            <div class="gmail-info">
+              <span class="gmail-title" style="color: #ea4335; font-size: 10.5px; font-weight: 700; text-transform: uppercase;">Gmail 商务与技术邮箱</span>
+              <div class="whatsapp-number-row">
+                <span class="whatsapp-number" id="gmailNumberText" style="font-size: 13px;">songfx.shop318318@gmail.com</span>
+                <button type="button" class="glass-btn mini-btn" id="copyGmailBtn" style="border-color: rgba(234,67,53,0.4); color: #ea4335;">📋 复制</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Direct Actions & QR Scan Grid -->
+        <div class="contact-grid" style="margin-top: 14px;">
+          <div class="contact-qr-box glass-card">
+            <!-- QR Tabs Switcher -->
+            <div class="qr-switch-tabs">
+              <button type="button" class="qr-tab-btn active" id="qrTabWhatsapp">🟢 WhatsApp</button>
+              <button type="button" class="qr-tab-btn" id="qrTabTelegram">✈️ Telegram</button>
+              <button type="button" class="qr-tab-btn" id="qrTabGmail">📧 Gmail</button>
+            </div>
+            <div class="contact-qr-wrapper">
+              <canvas id="whatsappQrCanvas" width="130" height="130"></canvas>
+            </div>
+            <span class="qr-label" id="qrScanLabel">📱 微信 / 相机扫码直达 WhatsApp 对话</span>
+          </div>
+
+          <div class="contact-services-box glass-card">
+            <b style="font-size: 13px; color: #fff; display: block; margin-bottom: 6px;">🚀 支持与定制合作范畴</b>
+            <div class="service-tags-list">
+              <span class="service-tag">✨ 商业版下载功能深度定制</span>
+              <span class="service-tag">🏢 企业/团队批量离线部署</span>
+              <span class="service-tag">⚡ 专属视频/流媒体协议逆向解析</span>
+              <span class="service-tag">💡 高并发下载内核优化</span>
+              <span class="service-tag">🤝 商务与技术授权合作</span>
+            </div>
+            <div class="contact-buttons-row" style="margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;">
+              <button type="button" class="liquid-btn primary-btn mini-btn" id="openWhatsappLinkBtn" style="background: linear-gradient(135deg, #25d366, #128c7e); border-color: #25d366; font-size: 11px; padding: 6px 4px;">
+                🟢 WhatsApp
+              </button>
+              <button type="button" class="liquid-btn primary-btn mini-btn" id="openTelegramLinkBtn" style="background: linear-gradient(135deg, #0088cc, #29b6f6); border-color: #29b6f6; font-size: 11px; padding: 6px 4px;">
+                ✈️ Telegram
+              </button>
+              <button type="button" class="liquid-btn primary-btn mini-btn" id="openGmailLinkBtn" style="background: linear-gradient(135deg, #c5221f, #ea4335); border-color: #ea4335; font-size: 11px; padding: 6px 4px;">
+                📧 发送邮件
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions" style="margin-top: 16px;">
+        <button class="liquid-btn primary-btn" id="closeContactAuthorBtn">完成</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dynamic Glass Floating Toast Notification -->
+  <div id="toast" class="glass-toast" role="status" aria-live="polite"></div>
+
+  <script src="qrcode.min.js"></script>
+  <script src="renderer.js"></script>
+  <script src="settings-fallback.js"></script>
+</body>
+</html>

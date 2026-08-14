@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Universal Drop Target</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+      user-select: none;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Segoe UI", Roboto, sans-serif;
+    }
+
+    .widget-container {
+      width: 164px;
+      height: 48px;
+      margin: 3px auto;
+      border-radius: 24px;
+      background: linear-gradient(135deg, rgba(22, 27, 40, 0.94), rgba(10, 13, 20, 0.98));
+      backdrop-filter: blur(28px) saturate(200%);
+      -webkit-backdrop-filter: blur(28px) saturate(200%);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      box-shadow: 
+        0 10px 26px rgba(0, 0, 0, 0.55), 
+        0 0 16px rgba(0, 113, 227, 0.3),
+        inset 0 1px 1px rgba(255, 255, 255, 0.5);
+      display: flex;
+      align-items: center;
+      padding: 0 8px 0 6px;
+      gap: 8px;
+      cursor: grab;
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.2s, box-shadow 0.2s, background 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .widget-container:active {
+      cursor: grabbing;
+    }
+
+    .widget-container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -50%;
+      width: 200%;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.08) 50%,
+        transparent 100%
+      );
+      transform: rotate(30deg);
+      pointer-events: none;
+      opacity: 0.6;
+    }
+
+    .widget-container:hover {
+      transform: scale(1.03);
+      border-color: rgba(0, 113, 227, 0.7);
+      box-shadow: 
+        0 14px 32px rgba(0, 0, 0, 0.65), 
+        0 0 24px rgba(0, 113, 227, 0.5),
+        inset 0 1px 1px rgba(255, 255, 255, 0.7);
+    }
+
+    .widget-container.dragover {
+      transform: scale(1.08) !important;
+      border-color: rgba(52, 199, 89, 0.95) !important;
+      background: linear-gradient(135deg, rgba(14, 45, 25, 0.98), rgba(8, 26, 15, 0.98)) !important;
+      box-shadow: 
+        0 16px 36px rgba(52, 199, 89, 0.5), 
+        0 0 28px rgba(52, 199, 89, 0.7),
+        inset 0 1px 2px rgba(255, 255, 255, 0.9) !important;
+    }
+
+    /* Left Glowing Cyber Orb */
+    .cyber-orb {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(0, 113, 227, 0.25), rgba(0, 198, 255, 0.35));
+      border: 1px solid rgba(0, 198, 255, 0.6);
+      box-shadow: 0 0 12px rgba(0, 113, 227, 0.6), inset 0 0 8px rgba(0, 198, 255, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      position: relative;
+      transition: all 0.25s ease;
+      pointer-events: none;
+    }
+
+    .cyber-orb svg {
+      width: 17px;
+      height: 17px;
+      color: #00f2fe;
+      filter: drop-shadow(0 0 4px rgba(0, 242, 254, 0.8));
+      transition: transform 0.25s ease;
+    }
+
+    .widget-container.downloading .cyber-orb {
+      background: linear-gradient(135deg, rgba(0, 113, 227, 0.4), rgba(0, 242, 254, 0.5));
+      border-color: #00f2fe;
+      animation: pulse-glow 1.8s infinite alternate;
+    }
+
+    .widget-container.dragover .cyber-orb {
+      background: linear-gradient(135deg, rgba(52, 199, 89, 0.4), rgba(48, 209, 88, 0.6)) !important;
+      border-color: #34c759 !important;
+      box-shadow: 0 0 16px rgba(52, 199, 89, 0.8) !important;
+    }
+
+    .widget-container.dragover .cyber-orb svg {
+      color: #34c759 !important;
+      filter: drop-shadow(0 0 6px #34c759) !important;
+      transform: translateY(2px);
+    }
+
+    @keyframes pulse-glow {
+      0% { box-shadow: 0 0 8px rgba(0, 113, 227, 0.5); }
+      100% { box-shadow: 0 0 20px rgba(0, 242, 254, 0.9), inset 0 0 10px rgba(0, 242, 254, 0.6); }
+    }
+
+    /* Middle Text Info */
+    .capsule-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .capsule-title {
+      font-size: 11.5px;
+      font-weight: 750;
+      color: #f5f5f7;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.25;
+      letter-spacing: 0.2px;
+      transition: color 0.2s ease;
+    }
+
+    .widget-container.downloading .capsule-title {
+      background: linear-gradient(90deg, #00f2fe, #4facfe);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-weight: 850;
+      font-size: 12px;
+    }
+
+    .capsule-sub {
+      font-size: 9px;
+      font-weight: 500;
+      color: rgba(235, 235, 245, 0.65);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 1px;
+      letter-spacing: 0.1px;
+    }
+
+    .widget-container.dragover .capsule-title {
+      color: #34c759 !important;
+      -webkit-text-fill-color: #34c759 !important;
+    }
+
+    /* Right Badge Pill */
+    .capsule-badge {
+      font-size: 9.5px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: rgba(255, 255, 255, 0.85);
+      flex-shrink: 0;
+      transition: all 0.2s ease;
+      pointer-events: none;
+    }
+
+    .widget-container.downloading .capsule-badge {
+      background: rgba(0, 113, 227, 0.35);
+      border-color: rgba(0, 198, 255, 0.5);
+      color: #00f2fe;
+    }
+
+    /* Context Menu */
+    .floating-menu {
+      position: fixed;
+      top: 54px;
+      left: 6px;
+      width: 152px;
+      background: rgba(22, 27, 40, 0.96);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 12px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.65), 0 0 16px rgba(0, 113, 227, 0.3);
+      padding: 5px 0;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+    }
+
+    .floating-menu.hidden {
+      display: none;
+    }
+
+    .menu-item {
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #f5f5f7;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .menu-item:hover {
+      background: rgba(0, 113, 227, 0.35);
+      color: #00f2fe;
+    }
+
+    .menu-item.danger:hover {
+      background: rgba(255, 69, 58, 0.25);
+      color: #ff453a;
+    }
+
+    .menu-divider {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.1);
+      margin: 3px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="widget-container" id="widget" title="拖入任意链接即刻下载 · 单击打开主界面 · 右键快捷菜单 · 拖动可任意移动位置">
+    <div class="cyber-orb" id="orb">
+      <svg id="orbIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="7 10 12 15 17 10"></polyline>
+        <line x1="12" y1="15" x2="12" y2="3"></line>
+      </svg>
+    </div>
+
+    <div class="capsule-info">
+      <div class="capsule-title" id="widgetTitle">全能极速下载</div>
+      <div class="capsule-sub" id="widgetSub">拖入链接即刻入队</div>
+    </div>
+
+    <div class="capsule-badge" id="widgetBadge">DROP</div>
+  </div>
+
+  <div class="floating-menu hidden" id="floatMenu">
+    <div class="menu-item" id="menuPaste">➕ 粘贴链接入队</div>
+    <div class="menu-item" id="menuPauseAll">⏸️ 暂停全部任务</div>
+    <div class="menu-item" id="menuResumeAll">▶️ 恢复全部任务</div>
+    <div class="menu-divider"></div>
+    <div class="menu-item" id="menuOpenMain">🖥️ 打开主界面</div>
+    <div class="menu-item danger" id="menuCloseWidget">✕ 隐藏悬浮球</div>
+  </div>
+
+  <script>
+    const widget = document.getElementById('widget');
+    const widgetTitle = document.getElementById('widgetTitle');
+    const widgetSub = document.getElementById('widgetSub');
+    const widgetBadge = document.getElementById('widgetBadge');
+    const orbIcon = document.getElementById('orbIcon');
+    const floatMenu = document.getElementById('floatMenu');
+    const native = window.downloader;
+
+    let allTasks = [];
+    let isDragOver = false;
+
+    function formatSpeed(bytes) {
+      if (!bytes || bytes <= 0) return '0 B/s';
+      const units = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
+      let i = 0;
+      let num = bytes;
+      while (num >= 1024 && i < units.length - 1) {
+        num /= 1024;
+        i++;
+      }
+      return `${num.toFixed(1)} ${units[i]}`;
+    }
+
+    function updateWidgetUI() {
+      if (isDragOver) return;
+
+      const activeTasks = allTasks.filter(t => t.status === 'downloading');
+      if (activeTasks.length > 0) {
+        widget.classList.add('downloading');
+        let totalSpeed = 0;
+        let totalProgress = 0;
+
+        activeTasks.forEach(t => {
+          if (typeof t.speed === 'number') totalSpeed += t.speed;
+          totalProgress += (t.progress || 0);
+        });
+        const avgProgress = Math.round(totalProgress / activeTasks.length);
+
+        widgetTitle.textContent = `⚡ ${formatSpeed(totalSpeed)}`;
+        widgetSub.textContent = `正在下载 ${activeTasks.length} 项 (${avgProgress}%)`;
+        widgetBadge.textContent = `${avgProgress}%`;
+
+        orbIcon.innerHTML = `
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="currentColor"></polygon>
+        `;
+      } else {
+        widget.classList.remove('downloading');
+        widgetTitle.textContent = '全能极速下载';
+        widgetSub.textContent = '拖入链接即刻入队';
+        widgetBadge.textContent = 'DROP';
+
+        orbIcon.innerHTML = `
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        `;
+      }
+    }
+
+    // ==========================================
+    // 🖱️ Window Dragging & Movement Engine
+    // ==========================================
+    let isMouseDown = false;
+    let startScreenX = 0;
+    let startScreenY = 0;
+    let hasMoved = false;
+
+    widget.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return; // Only left click
+      if (floatMenu) floatMenu.classList.add('hidden');
+      isMouseDown = true;
+      hasMoved = false;
+      startScreenX = e.screenX;
+      startScreenY = e.screenY;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isMouseDown) return;
+      const dx = e.screenX - startScreenX;
+      const dy = e.screenY - startScreenY;
+      if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+        hasMoved = true;
+        if (native?.moveFloatingWindow) {
+          native.moveFloatingWindow(dx, dy);
+        }
+        startScreenX = e.screenX;
+        startScreenY = e.screenY;
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      isMouseDown = false;
+    });
+
+    widget.addEventListener('click', () => {
+      if (hasMoved) return;
+      if (floatMenu && !floatMenu.classList.contains('hidden')) {
+        floatMenu.classList.add('hidden');
+        return;
+      }
+      if (native?.showMainWindow) native.showMainWindow();
+    });
+
+    // Right-Click Context Menu
+    widget.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      if (!floatMenu) return;
+      floatMenu.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (floatMenu && !floatMenu.contains(e.target) && !widget.contains(e.target)) {
+        floatMenu.classList.add('hidden');
+      }
+    });
+
+    document.getElementById('menuPaste')?.addEventListener('click', async () => {
+      floatMenu.classList.add('hidden');
+      if (native?.showMainWindow) await native.showMainWindow();
+      navigator.clipboard.readText().then(text => {
+        if (text && native?.dropTarget) native.dropTarget(text);
+      }).catch(() => {});
+    });
+
+    document.getElementById('menuPauseAll')?.addEventListener('click', () => {
+      floatMenu.classList.add('hidden');
+      if (native?.all) native.all('pause');
+    });
+
+    document.getElementById('menuResumeAll')?.addEventListener('click', () => {
+      floatMenu.classList.add('hidden');
+      if (native?.all) native.all('resume');
+    });
+
+    document.getElementById('menuOpenMain')?.addEventListener('click', () => {
+      floatMenu.classList.add('hidden');
+      if (native?.showMainWindow) native.showMainWindow();
+    });
+
+    document.getElementById('menuCloseWidget')?.addEventListener('click', () => {
+      floatMenu.classList.add('hidden');
+      if (native?.toggleFloatingWidget) native.toggleFloatingWidget(false);
+    });
+
+    // ==========================================
+    // 🎯 HTML5 Drag & Drop Target Engine
+    // ==========================================
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      window.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }, false);
+      document.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }, false);
+    });
+
+    window.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      if (!isDragOver) {
+        isDragOver = true;
+        widget.classList.add('dragover');
+        widgetTitle.textContent = '✨ 放开立即入队';
+        widgetSub.textContent = '智能提纯极速下载';
+        widgetBadge.textContent = '+ADD';
+      }
+    });
+
+    window.addEventListener('dragleave', (e) => {
+      if (e.clientX <= 0 || e.clientY <= 0 || e.clientX >= window.innerWidth || e.clientY >= window.innerHeight) {
+        isDragOver = false;
+        widget.classList.remove('dragover');
+        updateWidgetUI();
+      }
+    });
+
+    window.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      isDragOver = false;
+      widget.classList.remove('dragover');
+
+      let rawText = '';
+      try {
+        rawText = e.dataTransfer.getData('text/uri-list') ||
+                  e.dataTransfer.getData('text/plain') ||
+                  e.dataTransfer.getData('text') ||
+                  e.dataTransfer.getData('URL') || '';
+      } catch (err) {}
+
+      if (!rawText && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        const filePaths = Array.from(e.dataTransfer.files).map(f => f.path).filter(Boolean);
+        if (filePaths.length > 0) {
+          rawText = filePaths.join('\n');
+        }
+      }
+
+      if (rawText && native) {
+        try {
+          widgetTitle.textContent = '✨ 智能透析中...';
+          widgetSub.textContent = '已捕获拖拽目标';
+          widgetBadge.textContent = 'OK';
+
+          if (native.dropTarget) {
+            await native.dropTarget(rawText);
+          } else if (native.showMainWindow) {
+            await native.showMainWindow();
+          }
+        } catch (err) {
+          console.error('Floating drop add error:', err);
+        }
+      }
+
+      setTimeout(updateWidgetUI, 1200);
+    });
+
+    // ==========================================
+    // 📡 Native IPC Listeners
+    // ==========================================
+    if (native) {
+      if (native.onFloatingStats) {
+        native.onFloatingStats(data => {
+          const totalSpeed = data.totalSpeed || 0;
+          const activeCount = data.activeCount || 0;
+          if (isDragOver) return;
+
+          if (activeCount > 0 || totalSpeed > 0) {
+            widget.classList.add('downloading');
+            widgetTitle.textContent = `⚡ ${formatSpeed(totalSpeed)}`;
+            widgetSub.textContent = `${activeCount} 个任务极速下载中`;
+            widgetBadge.textContent = `RUN (${activeCount})`;
+            orbIcon.innerHTML = `<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="currentColor"></polygon>`;
+          } else {
+            widget.classList.remove('downloading');
+            widgetTitle.textContent = '全能极速下载';
+            widgetSub.textContent = '拖入链接即刻入队';
+            widgetBadge.textContent = 'DROP';
+            orbIcon.innerHTML = `
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            `;
+          }
+        });
+      }
+
+      native.onUpdate((t) => {
+        const idx = allTasks.findIndex(item => item.id === t.id);
+        if (idx < 0) allTasks.unshift(t);
+        else allTasks[idx] = t;
+        updateWidgetUI();
+      });
+
+      native.onRemove((id) => {
+        allTasks = allTasks.filter(t => t.id !== id);
+        updateWidgetUI();
+      });
+
+      if (native.list) {
+        native.list().then(l => {
+          allTasks = l || [];
+          updateWidgetUI();
+        }).catch(() => {});
+      }
+    }
+  </script>
+</body>
+</html>
