@@ -2305,6 +2305,18 @@ body.dark .switch-slider {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   margin-top: 1px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-block;
+}
+
+.speed-text-meta strong.active-pulse {
+  animation: liveSpeedPulse 1.2s ease-in-out infinite alternate;
+  filter: drop-shadow(0 0 6px rgba(0, 242, 254, 0.7));
+}
+
+@keyframes liveSpeedPulse {
+  0% { transform: scale(1); filter: drop-shadow(0 0 4px rgba(0, 242, 254, 0.4)); }
+  100% { transform: scale(1.06); filter: drop-shadow(0 0 10px rgba(0, 242, 254, 0.95)); }
 }
 
 .speed-wave-canvas {

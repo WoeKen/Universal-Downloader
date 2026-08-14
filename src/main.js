@@ -2576,15 +2576,13 @@ function pump() {
     start(t); 
   } 
 
-  // Broadcast live bandwidth speed & active counts to floating widget
-  const runningTasks = [...tasks.values()].filter(t => t.running);
-  const totalSpeed = runningTasks.reduce((sum, t) => sum + (t.speed || 0), 0);
+  // Broadcast live bandwidth speed & active counts to all windows (main UI & floating widget)
+  const runningTasks = [...tasks.values()].filter(t => t.running || t.status === 'downloading');
+  const totalSpeed = runningTasks.reduce((sum, t) => sum + (Number(t.speed) || 0), 0);
   const activeTasksCount = runningTasks.length;
-  if (floatingWin && !floatingWin.isDestroyed()) {
-    floatingWin.webContents.send('floating:stats', { totalSpeed, activeCount: activeTasksCount });
-  }
+  send('floating:stats', { totalSpeed, activeCount: activeTasksCount });
 }
-setInterval(pump, 1000);
+setInterval(pump, 500);
 
 function parseAria2Size(str) {
   if (!str) return 0;
@@ -3009,14 +3007,20 @@ function ytDlp(t) {
   let printedPath = ''; 
   let lastErrorMsg = '';
 
+  let lastParseBytes = t.downloaded || 0; 
+  let lastParseTime = Date.now();
+
   const parse = b => { 
     const text = b.toString(); 
     for (const line of text.split(/\r?\n/)) { 
       const candidate = line.trim(); 
+      if (!candidate) continue;
       if (/^ERROR:/i.test(candidate)) {
         lastErrorMsg = candidate.replace(/^ERROR:\s*/i, '');
       }
-      if (candidate && fs.existsSync(candidate)) printedPath = candidate; 
+      if (fs.existsSync(candidate)) printedPath = candidate; 
+
+      // 1. Progress Template Pipe Match: "download: 45.0%|12345|67890|NA|456789"
       const fields = candidate.split('|'); 
       if (fields.length >= 5 && /%/.test(fields[0])) { 
         const percent = Number(fields[0].replace(/[^0-9.]/g, '')); 
@@ -3027,13 +3031,54 @@ function ytDlp(t) {
         if (Number.isFinite(downloaded) && downloaded > 0) t.downloaded = downloaded; 
         if (Number.isFinite(total) && total > 0) t.size = total; 
         if (Number.isFinite(speed) && speed > 0) t.speed = speed; 
-      } 
+      }
+
+      // 2. Standard stdout regex match for speed: "at  2.45MiB/s" or "at 500KiB/s"
+      const speedMatch = candidate.match(/at\s+([0-9.]+)\s*([KMGTkmgt]?i?B)\/s/i);
+      if (speedMatch) {
+        const val = parseFloat(speedMatch[1]);
+        const unit = speedMatch[2].toUpperCase();
+        const mult = unit.startsWith('G') ? 1073741824 : unit.startsWith('M') ? 1048576 : unit.startsWith('K') ? 1024 : 1;
+        t.speed = Math.round(val * mult);
+      }
+
+      // 3. Percent match if template was not applied
+      const pctMatch = candidate.match(/(\d+(?:\.\d+)?)%/);
+      if (pctMatch) {
+        const p = Number(pctMatch[1]);
+        if (Number.isFinite(p)) t.progress = Math.max(0, Math.min(100, p));
+      }
+
+      // 4. Downloaded size and total size match: "[download] 12.5MiB of 50.0MiB"
+      const sizeMatch = candidate.match(/([0-9.]+)\s*([KMGTkmgt]?i?B)\s+of\s+(?:~\s*)?([0-9.]+)\s*([KMGTkmgt]?i?B)/i);
+      if (sizeMatch) {
+        const dVal = parseFloat(sizeMatch[1]), dUnit = sizeMatch[2].toUpperCase();
+        const dMult = dUnit.startsWith('G') ? 1073741824 : dUnit.startsWith('M') ? 1048576 : dUnit.startsWith('K') ? 1024 : 1;
+        t.downloaded = Math.round(dVal * dMult);
+
+        const tVal = parseFloat(sizeMatch[3]), tUnit = sizeMatch[4].toUpperCase();
+        const tMult = tUnit.startsWith('G') ? 1073741824 : tUnit.startsWith('M') ? 1048576 : tUnit.startsWith('K') ? 1024 : 1;
+        t.size = Math.round(tVal * tMult);
+      }
     } 
-    if (!t.progress) { 
-      const matches = [...text.matchAll(/(\d+(?:\.\d+)?)%/g)]; 
-      const last = matches.at(-1); 
-      if (last) t.progress = Math.max(0, Math.min(100, Number(last[1]))); 
-    } 
+
+    // 5. Delta speed computation fallback
+    const now = Date.now();
+    if (now - lastParseTime >= 300) {
+      if (t.downloaded && t.downloaded > lastParseBytes) {
+        const deltaBytes = t.downloaded - lastParseBytes;
+        const dt = (now - lastParseTime) / 1000;
+        if (dt > 0) {
+          const calcSpeed = Math.round(deltaBytes / dt);
+          if (!t.speed || t.speed === 0 || now - lastParseTime > 1000) {
+            t.speed = calcSpeed;
+          }
+        }
+        lastParseBytes = t.downloaded;
+      }
+      lastParseTime = now;
+    }
+
     if (!t.thumbnail) attachVideoInfo(t, '', false); 
     emit(t); 
   }; 
@@ -3163,6 +3208,9 @@ function runSparseSegments(t, part, meta) {
   }
 
   let activeStreams = 0;
+  let lastGlobalBytes = t.downloaded || 0;
+  let lastGlobalTime = Date.now();
+
   const checkDone = () => {
     if (activeStreams === 0 && t.downloaded >= t.size && !t.cancelled && !t.paused) {
       try { fs.closeSync(fd); t.fd = null; } catch (e) {}
@@ -3176,7 +3224,7 @@ function runSparseSegments(t, part, meta) {
     }
   };
 
-  t.segments.forEach((s) => {
+  t.segments.forEach(s => {
     const totalSeg = s.end - s.start + 1;
     if (s.done >= totalSeg) return;
     activeStreams++;
@@ -3188,8 +3236,6 @@ function runSparseSegments(t, part, meta) {
       }
 
       let writeOffset = s.start + s.done;
-      let lastTime = Date.now();
-      let lastBytes = 0;
 
       res.on('data', chunk => {
         if (t.paused || t.cancelled) return;
@@ -3197,17 +3243,21 @@ function runSparseSegments(t, part, meta) {
           fs.writeSync(fd, chunk, 0, chunk.length, writeOffset);
           writeOffset += chunk.length;
           s.done += chunk.length;
-          lastBytes += chunk.length;
-
-          const now = Date.now();
-          if (now - lastTime >= 500) {
-            t.speed = (lastBytes / (now - lastTime)) * 1000;
-            lastTime = now;
-            lastBytes = 0;
-          }
 
           t.downloaded = t.segments.reduce((a, x) => a + x.done, 0);
           t.progress = t.size ? (t.downloaded / t.size) * 100 : 0;
+
+          const now = Date.now();
+          if (now - lastGlobalTime >= 250) {
+            const deltaBytes = t.downloaded - lastGlobalBytes;
+            const dt = (now - lastGlobalTime) / 1000;
+            if (dt > 0 && deltaBytes >= 0) {
+              t.speed = Math.round(deltaBytes / dt);
+            }
+            lastGlobalBytes = t.downloaded;
+            lastGlobalTime = now;
+          }
+
           emit(t);
         } catch (e) {
           retry(t, e.message);

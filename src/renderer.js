@@ -621,46 +621,82 @@ function closePreviewModal() {
   if (modal) modal.classList.add('hidden');
 }
 
-// Real-time Global Speed Waveform Visualizer
-const speedHistory = new Array(30).fill(0);
+// Real-time Global Speed Waveform Visualizer & Dynamic Engine Sync
+const speedHistory = new Array(40).fill(0);
+let currentSmoothSpeed = 0;
+let backendTotalSpeed = 0;
+
 function startSpeedWaveform() {
   const canvas = document.getElementById('speedWaveCanvas');
+  const liveSpeedEl = document.getElementById('metricLiveSpeed');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
 
-  function draw() {
-    let activeSpeed = 0;
+  // Sample speed history every 200ms (5Hz) to provide an 8-second smooth sliding window
+  setInterval(() => {
+    let taskSpeedSum = 0;
     tasks.forEach(t => {
-      if (t.status === 'downloading' && typeof t.speed === 'number') activeSpeed += t.speed;
+      if ((t.status === 'downloading' || t.running) && t.speed) {
+        const s = typeof t.speed === 'number' ? t.speed : parseFloat(t.speed) || 0;
+        if (s > 0) taskSpeedSum += s;
+      }
     });
 
+    const activeSpeed = Math.max(taskSpeedSum, backendTotalSpeed);
     speedHistory.push(activeSpeed);
-    if (speedHistory.length > 30) speedHistory.shift();
+    if (speedHistory.length > 40) speedHistory.shift();
+  }, 200);
 
-    const liveSpeedEl = document.getElementById('metricLiveSpeed');
-    if (liveSpeedEl) liveSpeedEl.textContent = formatBytes(activeSpeed) + '/s';
+  function draw() {
+    let instantaneousSpeed = 0;
+    tasks.forEach(t => {
+      if ((t.status === 'downloading' || t.running) && t.speed) {
+        const s = typeof t.speed === 'number' ? t.speed : parseFloat(t.speed) || 0;
+        if (s > 0) instantaneousSpeed += s;
+      }
+    });
+
+    const targetSpeed = Math.max(instantaneousSpeed, backendTotalSpeed);
+
+    // Smooth exponential moving average for fluid number and curve transitions
+    currentSmoothSpeed = currentSmoothSpeed * 0.8 + targetSpeed * 0.2;
+    if (Math.abs(currentSmoothSpeed - targetSpeed) < 1 && targetSpeed === 0) {
+      currentSmoothSpeed = 0;
+    }
+
+    if (liveSpeedEl) {
+      if (currentSmoothSpeed > 10) {
+        liveSpeedEl.textContent = formatBytes(Math.round(currentSmoothSpeed)) + '/s';
+        liveSpeedEl.classList.add('active-pulse');
+      } else {
+        liveSpeedEl.textContent = '0 B/s';
+        liveSpeedEl.classList.remove('active-pulse');
+      }
+    }
 
     const w = canvas.width;
     const h = canvas.height;
     ctx.clearRect(0, 0, w, h);
 
-    const maxSpeed = Math.max(...speedHistory, 1024 * 1024);
+    const maxSpeed = Math.max(...speedHistory, currentSmoothSpeed, 512 * 1024);
     const step = w / (speedHistory.length - 1);
 
+    // 1. Draw smooth area fill gradient
     ctx.beginPath();
     ctx.moveTo(0, h);
 
     for (let i = 0; i < speedHistory.length; i++) {
-      const val = speedHistory[i];
-      const norm = Math.min(1, val / maxSpeed);
+      const val = (i === speedHistory.length - 1) ? currentSmoothSpeed : speedHistory[i];
+      const norm = Math.min(1, Math.max(0, val / maxSpeed));
       const x = i * step;
-      const y = h - norm * (h - 8) - 4;
+      const y = h - norm * (h - 10) - 4;
       if (i === 0) {
         ctx.lineTo(x, y);
       } else {
         const prevX = (i - 1) * step;
-        const prevNorm = Math.min(1, speedHistory[i - 1] / maxSpeed);
-        const prevY = h - prevNorm * (h - 8) - 4;
+        const prevVal = speedHistory[i - 1];
+        const prevNorm = Math.min(1, Math.max(0, prevVal / maxSpeed));
+        const prevY = h - prevNorm * (h - 10) - 4;
         const cpX = (prevX + x) / 2;
         ctx.bezierCurveTo(cpX, prevY, cpX, y, x, y);
       }
@@ -670,30 +706,50 @@ function startSpeedWaveform() {
     ctx.closePath();
 
     const grad = ctx.createLinearGradient(0, 0, 0, h);
-    grad.addColorStop(0, 'rgba(0, 242, 254, 0.35)');
-    grad.addColorStop(1, 'rgba(0, 113, 227, 0.02)');
+    grad.addColorStop(0, currentSmoothSpeed > 0 ? 'rgba(0, 242, 254, 0.45)' : 'rgba(0, 242, 254, 0.1)');
+    grad.addColorStop(1, 'rgba(0, 113, 227, 0.01)');
     ctx.fillStyle = grad;
     ctx.fill();
 
+    // 2. Draw glowing neon path
     ctx.beginPath();
     for (let i = 0; i < speedHistory.length; i++) {
-      const val = speedHistory[i];
-      const norm = Math.min(1, val / maxSpeed);
+      const val = (i === speedHistory.length - 1) ? currentSmoothSpeed : speedHistory[i];
+      const norm = Math.min(1, Math.max(0, val / maxSpeed));
       const x = i * step;
-      const y = h - norm * (h - 8) - 4;
+      const y = h - norm * (h - 10) - 4;
       if (i === 0) {
         ctx.moveTo(x, y);
       } else {
         const prevX = (i - 1) * step;
-        const prevNorm = Math.min(1, speedHistory[i - 1] / maxSpeed);
-        const prevY = h - prevNorm * (h - 8) - 4;
+        const prevVal = speedHistory[i - 1];
+        const prevNorm = Math.min(1, Math.max(0, prevVal / maxSpeed));
+        const prevY = h - prevNorm * (h - 10) - 4;
         const cpX = (prevX + x) / 2;
         ctx.bezierCurveTo(cpX, prevY, cpX, y, x, y);
       }
     }
-    ctx.strokeStyle = '#00f2fe';
-    ctx.lineWidth = 1.8;
+
+    ctx.save();
+    ctx.shadowColor = currentSmoothSpeed > 0 ? 'rgba(0, 242, 254, 0.9)' : 'rgba(0, 242, 254, 0.3)';
+    ctx.shadowBlur = currentSmoothSpeed > 0 ? 8 : 2;
+    ctx.strokeStyle = currentSmoothSpeed > 0 ? '#00f2fe' : 'rgba(0, 242, 254, 0.4)';
+    ctx.lineWidth = currentSmoothSpeed > 0 ? 2.2 : 1.2;
     ctx.stroke();
+    ctx.restore();
+
+    // 3. Draw leading active beacon dot
+    if (currentSmoothSpeed > 0) {
+      const lastX = w;
+      const lastNorm = Math.min(1, Math.max(0, currentSmoothSpeed / maxSpeed));
+      const lastY = h - lastNorm * (h - 10) - 4;
+      ctx.beginPath();
+      ctx.arc(lastX - 2, lastY, 3, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = '#00f2fe';
+      ctx.shadowBlur = 10;
+      ctx.fill();
+    }
 
     requestAnimationFrame(draw);
   }
@@ -3582,6 +3638,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const historyModal = document.getElementById('clipboardHistoryModal');
         if (historyModal && !historyModal.classList.contains('hidden')) {
           renderClipboardHistoryList(document.getElementById('historySearchInput')?.value?.trim() || '');
+        }
+      });
+    }
+
+    if (nativeApi.onFloatingStats) {
+      nativeApi.onFloatingStats(stats => {
+        if (stats && typeof stats.totalSpeed === 'number') {
+          backendTotalSpeed = stats.totalSpeed;
         }
       });
     }
