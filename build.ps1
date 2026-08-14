@@ -21,6 +21,10 @@ if (Get-Command node -ErrorAction SilentlyContinue) {
             break
         }
     }
+    if (-not $nodeExe) {
+        $dynamicSearch = Get-ChildItem -Path "$env:USERPROFILE\.cache", "$env:USERPROFILE\.nvm", "$env:LOCALAPPDATA" -Filter "node.exe" -Recurse -Depth 5 -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($dynamicSearch) { $nodeExe = $dynamicSearch.FullName }
+    }
 }
 
 if (-not $nodeExe) {
