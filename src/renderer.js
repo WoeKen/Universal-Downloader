@@ -1,4 +1,4 @@
-// Antigravity Liquid Glass UI Architecture & Engine Bridge
+// Universal Downloader - Liquid Glass UI Architecture & Engine Bridge
 let currentFilter = 'all';
 let isDarkTheme = localStorage.getItem('theme') !== 'light';
 let currentLang = localStorage.getItem('language') || 'zh';

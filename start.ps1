@@ -13,7 +13,7 @@ if (Get-Command node -ErrorAction SilentlyContinue) {
         "$env:ProgramFiles\nodejs\node.exe",
         "${env:ProgramFiles(x86)}\nodejs\node.exe",
         "$env:LOCALAPPDATA\Programs\node\node.exe",
-        "$env:USERPROFILE\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe"
+        "$env:APPDATA\npm\node.exe"
     )
     foreach ($cand in $candidates) {
         if ($cand -and (Test-Path $cand)) {
