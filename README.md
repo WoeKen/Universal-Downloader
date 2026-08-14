@@ -3,17 +3,16 @@
 # ⚡ Universal Downloader (全能下载器)
 ### *Next-Gen Liquid Glass Multi-Protocol Media & Stream Workstation*
 
-[![Release Version](https://img.shields.io/badge/release-v1.1.9-00f2fe.svg?style=for-the-badge&logo=electron)](https://github.com)
-[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-34c759.svg?style=for-the-badge&logo=windows)](https://github.com)
+[![Release Version](https://img.shields.io/badge/release-v1.1.9-00f2fe.svg?style=for-the-badge&logo=electron)](https://github.com/WoeKen/Universal-Downloader/releases)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-34c759.svg?style=for-the-badge&logo=windows)](https://github.com/WoeKen/Universal-Downloader)
 [![License](https://img.shields.io/badge/License-MIT-ff2d55.svg?style=for-the-badge)](LICENSE)
-[![Downloads](https://img.shields.io/badge/Downloads-100k%2B-blue.svg?style=for-the-badge)](https://github.com)
-[![Stars](https://img.shields.io/badge/Stars-Love-gold.svg?style=for-the-badge&logo=github)](https://github.com)
+[![Stars](https://img.shields.io/github/stars/WoeKen/Universal-Downloader?style=for-the-badge&logo=github&color=gold)](https://github.com/WoeKen/Universal-Downloader/stargazers)
 
 <p align="center">
   <b>🌐 零拷贝高并发分片 · 🧲 BitTorrent/磁力雷达 · 🎬 4K/8K音视频嗅探 · 🚫 100%全网社交媒体纯净无水印 · 🔮 桌面悬浮测速球 · 📱 局域网无线扫码投递</b>
 </p>
 
-[English](./README_EN.md) · [简体中文](./README.md) · [下载体验](https://github.com) · [商务合作与定制](#-商务定制与作者直联)
+[简体中文](./README.md) · [📥 下载最新体验版](https://github.com/WoeKen/Universal-Downloader/releases) · [💬 商务合作与定制](#-商务定制与作者直联)
 
 ---
 
@@ -63,21 +62,12 @@ graph LR
 
 ---
 
-## 🖥️ 视觉与交互预览
-
-<div align="center">
-  <img src="https://via.placeholder.com/800x480.png?text=Universal+Downloader+Liquid+Glass+Workstation" alt="Universal Downloader UI Preview" width="85%">
-</div>
-
----
-
 ## 📦 快速下载体验
 
 | 发行版本 | 格式 | 说明 | 下载直达 |
 | :--- | :--- | :--- | :--- |
-| **Windows 独立安装版** | `.exe (NSIS)` | 一键安装，自动关联磁力与种子协议 | [📥 点击下载 Setup.exe](https://github.com) |
-| **Windows 绿色免安装版** | `.zip / .exe` | 解压即用，纯净便携 | [📥 点击下载 Portable.zip](https://github.com) |
-| **macOS / Linux** | `.dmg / .AppImage` | 跨平台支持包 | [📥 点击查看 Releases](https://github.com) |
+| **Windows 独立安装版** | `.exe (NSIS)` | 一键安装，自动关联磁力与种子协议 | [📥 点击下载 Setup.exe](https://github.com/WoeKen/Universal-Downloader/releases) |
+| **Windows 绿色免安装版** | `.zip / .exe` | 解压即用，纯净便携 | [📥 点击下载 Portable.zip](https://github.com/WoeKen/Universal-Downloader/releases) |
 
 ---
 
@@ -85,11 +75,11 @@ graph LR
 
 ```bash
 # 1. 克隆代码仓库
-git clone https://github.com/your-username/universal-downloader.git
-cd universal-downloader
+git clone https://github.com/WoeKen/Universal-Downloader.git
+cd Universal-Downloader
 
 # 2. 安装依赖
-npm install # 或 pnpm install
+npm install
 
 # 3. 本地启动热重载开发环境
 npm run start
@@ -120,7 +110,7 @@ powershell -ExecutionPolicy Bypass -File .\build.ps1
 
 如果全能下载器为您带来了前所未有的下载与流媒体解析体验，请给我们点一个 ⭐️ **Star**！这是我们持续迭代的最大动力！
 
-[![Star History Chart](https://api.star-history.com/svg?repos=woeken318/universal-downloader&type=Date)](https://star-history.com/#woeken318/universal-downloader&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=WoeKen/Universal-Downloader&type=Date)](https://star-history.com/#WoeKen/Universal-Downloader&Date)
 
 ---
 
