@@ -347,13 +347,18 @@ body.light-theme .brand-title {
   border: 1px solid var(--glass-border-subtle);
 }
 
+.format-pills-group.four-pills {
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 4px;
+}
+
 .format-mode-pill {
   height: 32px;
   border-radius: calc(var(--radius-md) - 2px);
   border: none;
   background: transparent;
   color: var(--text-muted);
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
@@ -361,6 +366,7 @@ body.light-theme .brand-title {
   align-items: center;
   justify-content: center;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 0 4px;
 }
 
 .format-mode-pill.active {
@@ -380,6 +386,12 @@ body.light-theme .brand-title {
   background: rgba(0, 242, 254, 0.18);
   color: var(--accent-cyan);
   border-color: var(--accent-cyan);
+}
+
+.format-mode-pill[data-mode="file"].active {
+  background: rgba(167, 139, 250, 0.2);
+  color: #a78bfa;
+  border-color: #a78bfa;
 }
 
 .mobile-primary-btn {
@@ -945,6 +957,104 @@ body.light-theme .brand-title {
   width: 100%;
   filter: invert(1) hue-rotate(180deg);
   border-radius: var(--radius-sm);
+}
+
+/* 3. Cinema Image Lightbox */
+.cinema-image-wrap {
+  width: 100%;
+  border-radius: var(--radius-lg);
+  background: #090c10;
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+  border: 1px solid var(--glass-border);
+  display: flex;
+  flex-direction: column;
+}
+
+.cinema-image-element {
+  width: 100%;
+  max-height: 48vh;
+  object-fit: contain;
+  background: #090c10;
+}
+
+/* 4. Cinema APK Card */
+.cinema-apk-wrap,
+.cinema-file-wrap {
+  width: 100%;
+  border-radius: var(--radius-lg);
+  background: rgba(14, 18, 28, 0.95);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+  padding: 24px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+}
+
+.apk-icon-circle,
+.file-icon-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(0, 242, 254, 0.12);
+  border: 1.5px solid rgba(0, 242, 254, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.file-icon-circle {
+  background: rgba(167, 139, 250, 0.12);
+  border-color: rgba(167, 139, 250, 0.35);
+}
+
+.apk-title,
+.file-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-primary);
+  max-width: 90%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.apk-sub,
+.file-sub {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.apk-install-hero-btn,
+.file-open-hero-btn {
+  width: 100%;
+  height: 44px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: linear-gradient(135deg, #00f2fe, #4facfe);
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 242, 254, 0.35);
+  margin-top: 6px;
+}
+
+.file-open-hero-btn {
+  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35);
+}
+
+.apk-install-hero-btn:active,
+.file-open-hero-btn:active {
+  transform: scale(0.97);
 }
 
 /* 3. Flagship Action Buttons Grid */

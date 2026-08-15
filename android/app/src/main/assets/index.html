@@ -80,10 +80,11 @@
 
         <!-- Intelligent Format Mode Switcher -->
         <div class="format-mode-bar">
-          <div class="format-pills-group">
+          <div class="format-pills-group four-pills">
             <button class="format-mode-pill active" data-mode="auto">⚡ 智能自适应</button>
-            <button class="format-mode-pill" data-mode="video">🎬 极清视频 (MP4)</button>
-            <button class="format-mode-pill" data-mode="audio">🎵 提取音频 (MP3)</button>
+            <button class="format-mode-pill" data-mode="video">🎬 视频(MP4)</button>
+            <button class="format-mode-pill" data-mode="audio">🎵 音频(MP3)</button>
+            <button class="format-mode-pill" data-mode="file">📦 应用/文件</button>
           </div>
         </div>
 
@@ -183,7 +184,39 @@
               <h4 id="audioMetaTitle" class="audio-flagship-title">无损音乐原声</h4>
               <p id="audioMetaAuthor" class="audio-flagship-artist">Universal Studio Master · 320kbps</p>
             </div>
-            <audio id="nativeAudioPlayer" controls class="flagship-audio-bar"></audio>
+          <!-- Image Lightbox Box -->
+          <div id="imageContainer" class="cinema-image-wrap hidden">
+            <img id="nativeImageViewer" class="cinema-image-element" src="" alt="原图预览">
+            <div class="cinema-video-footer">
+              <span class="cinema-meta-tag">🖼️ 高清原始图像</span>
+              <span class="cinema-status-tag">无损无压缩</span>
+            </div>
+          </div>
+
+          <!-- APK Package Card Box -->
+          <div id="apkContainer" class="cinema-apk-wrap hidden">
+            <div class="apk-icon-circle">
+              <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#00f2fe" stroke-width="2"><path d="M12 2v4M6 5l3 3M18 5l-3 3M4 14a8 8 0 0 0 16 0V11H4v3z"></path><circle cx="9" cy="14" r="1" fill="#00f2fe"></circle><circle cx="15" cy="14" r="1" fill="#00f2fe"></circle></svg>
+            </div>
+            <h4 id="apkMetaTitle" class="apk-title">应用安装包</h4>
+            <p id="apkMetaSub" class="apk-sub">Android Package Archive · Ready to Install</p>
+            <button id="installApkBtn" class="apk-install-hero-btn">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              <span>🚀 立即安装此应用</span>
+            </button>
+          </div>
+
+          <!-- Document / Archive Generic Box -->
+          <div id="fileContainer" class="cinema-file-wrap hidden">
+            <div class="file-icon-circle">
+              <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#a78bfa" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            </div>
+            <h4 id="fileMetaTitle" class="file-title">文件已就绪</h4>
+            <p id="fileMetaSub" class="file-sub">Universal Document / Archive File</p>
+            <button id="openWithAppBtn" class="file-open-hero-btn">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+              <span>📂 用系统其他应用打开</span>
+            </button>
           </div>
 
           <!-- Flagship Quick Action Buttons -->

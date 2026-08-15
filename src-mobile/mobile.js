@@ -309,7 +309,7 @@
     }
   };
 
-  window.onNativeDownloadCompleted = function (taskId, localFilePath) {
+  window.onNativeDownloadCompleted = function (taskId, localFilePath, mimeType) {
     const t = tasks.find(x => x.id === taskId);
     if (t) {
       t.status = 'completed';
@@ -317,15 +317,28 @@
       t.downloaded = t.size || t.downloaded;
       t.speed = 0;
       t.localPath = localFilePath;
+      t.mimeType = mimeType;
       t.url = 'file://' + localFilePath;
+
+      const lower = localFilePath.toLowerCase();
+      if (lower.endsWith('.apk')) {
+        t.category = 'apk';
+      } else if (lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.png') || lower.endsWith('.webp') || lower.endsWith('.gif')) {
+        t.category = 'picture';
+      } else if (lower.endsWith('.mp3') || lower.endsWith('.flac') || lower.endsWith('.wav') || lower.endsWith('.m4a')) {
+        t.category = 'audio';
+      } else if (lower.endsWith('.mp4') || lower.endsWith('.mkv') || lower.endsWith('.webm')) {
+        t.category = 'video';
+      }
+
       saveTasks();
       renderTaskList();
       triggerHaptic('success');
-      showToast(`🎉 「${t.title.slice(0, 15)}...」已成功保存至手机相册！`);
+      showToast(`🎉 「${t.title.slice(0, 15)}...」下载完成！已妥善保存在下载目录`);
     }
   };
 
-  // 5. In-App Media Player Modal (Flagship Aesthetic Experience)
+  // 5. In-App Media & File Modal (True Universal Previewer)
   function openMediaModal(task) {
     activePlayingTask = task;
     const modal = document.getElementById('mediaModal');
@@ -333,20 +346,31 @@
     const badgeEl = document.getElementById('playerTypeBadge');
     const videoBox = document.getElementById('videoContainer');
     const audioBox = document.getElementById('audioContainer');
+    const imageBox = document.getElementById('imageContainer');
+    const apkBox = document.getElementById('apkContainer');
+    const fileBox = document.getElementById('fileContainer');
+
     const video = document.getElementById('nativeVideoPlayer');
     const audio = document.getElementById('nativeAudioPlayer');
+    const imgViewer = document.getElementById('nativeImageViewer');
     const disc = document.getElementById('mobileVinylDisc');
     const vinylCenter = document.getElementById('vinylCoverImg');
     const saveActionText = document.getElementById('saveActionText');
 
     modal.classList.remove('hidden');
 
+    // Hide all first
+    [videoBox, audioBox, imageBox, apkBox, fileBox].forEach(el => {
+      if (el) {
+        el.style.display = 'none';
+        el.classList.add('hidden');
+      }
+    });
+
     if (task.category === 'audio') {
       if (badgeEl) badgeEl.textContent = '🎵 音乐';
       titleEl.textContent = task.title || '无损音乐原声';
-      videoBox.style.display = 'none';
       audioBox.style.display = 'flex';
-      videoBox.classList.add('hidden');
       audioBox.classList.remove('hidden');
       document.getElementById('audioMetaTitle').textContent = task.title || '无损音乐原声';
       if (task.cover && vinylCenter) {
@@ -355,15 +379,35 @@
       if (saveActionText) saveActionText.textContent = '保存音乐';
       audio.src = task.url;
       audio.play().catch(() => {});
-      disc.classList.add('playing');
-      audio.onpause = () => disc.classList.remove('playing');
-      audio.onplay = () => disc.classList.add('playing');
+      disc?.classList.add('playing');
+      audio.onpause = () => disc?.classList.remove('playing');
+      audio.onplay = () => disc?.classList.add('playing');
+    } else if (task.category === 'picture') {
+      if (badgeEl) badgeEl.textContent = '🖼️ 图片';
+      titleEl.textContent = task.title || '高清图像预览';
+      imageBox.style.display = 'flex';
+      imageBox.classList.remove('hidden');
+      if (imgViewer) imgViewer.src = task.url || task.cover;
+      if (saveActionText) saveActionText.textContent = '保存相册';
+    } else if (task.category === 'apk') {
+      if (badgeEl) badgeEl.textContent = '📦 安装包';
+      titleEl.textContent = task.title || 'Android 安装包';
+      apkBox.style.display = 'flex';
+      apkBox.classList.remove('hidden');
+      document.getElementById('apkMetaTitle').textContent = task.title || 'Android 应用安装包';
+      if (saveActionText) saveActionText.textContent = '安装应用';
+    } else if (task.category === 'document' || task.category === 'archive' || task.category === 'file') {
+      if (badgeEl) badgeEl.textContent = task.category === 'document' ? '📄 文档' : task.category === 'archive' ? '🗜️ 压缩包' : '📁 文件';
+      titleEl.textContent = task.title || '文件详情';
+      fileBox.style.display = 'flex';
+      fileBox.classList.remove('hidden');
+      document.getElementById('fileMetaTitle').textContent = task.title || '在线文件';
+      if (saveActionText) saveActionText.textContent = '打开文件';
     } else {
+      // Default: Video
       if (badgeEl) badgeEl.textContent = '🎬 视频';
       titleEl.textContent = task.title || '极清视频预览';
-      audioBox.style.display = 'none';
       videoBox.style.display = 'flex';
-      audioBox.classList.add('hidden');
       videoBox.classList.remove('hidden');
       if (saveActionText) saveActionText.textContent = '保存相册';
       if (task.cover) video.poster = task.cover;
@@ -371,6 +415,34 @@
       video.play().catch(() => {});
     }
   }
+
+  // APK Install Button
+  document.getElementById('installApkBtn')?.addEventListener('click', () => {
+    if (activePlayingTask && activePlayingTask.localPath) {
+      triggerHaptic('selection');
+      if (window.NativeAndroid?.installApk) {
+        window.NativeAndroid.installApk(activePlayingTask.localPath);
+      } else {
+        showToast('📦 正在唤起系统 APK 安装器...');
+      }
+    } else {
+      showToast('⚠️ 文件尚未下载完成');
+    }
+  });
+
+  // Document / File Open Button
+  document.getElementById('openWithAppBtn')?.addEventListener('click', () => {
+    if (activePlayingTask && activePlayingTask.localPath) {
+      triggerHaptic('selection');
+      if (window.NativeAndroid?.openDownloadedFile) {
+        window.NativeAndroid.openDownloadedFile(activePlayingTask.localPath, activePlayingTask.mimeType || '*/*');
+      } else {
+        showToast('📂 正在用系统默认应用打开文件...');
+      }
+    } else {
+      showToast('⚠️ 文件尚未下载完成');
+    }
+  });
 
   document.getElementById('copyMediaUrlBtn')?.addEventListener('click', () => {
     if (activePlayingTask && activePlayingTask.url) {

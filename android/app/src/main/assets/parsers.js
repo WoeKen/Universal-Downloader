@@ -308,23 +308,60 @@ const MobileParsers = {
     };
   },
 
-  // 6. 通用音视频与直链解析
-  async parseGeneric(url) {
-    const isAudio = /\.(mp3|flac|wav|aac|m4a|ogg)($|\?)/i.test(url);
-    const isVideo = /\.(mp4|mkv|webm|mov|avi|flv|ts|m3u8)($|\?)/i.test(url);
-    let filename = 'download';
+  // 6. 通用直链与全格式智能透析 (APK, 图片, 文档, 压缩包, 音频, 视频)
+  async parseGeneric(url, mode = 'auto') {
+    let filename = 'download_' + Date.now();
+    let ext = 'bin';
     try {
       const parsed = new URL(url);
       const parts = parsed.pathname.split('/').filter(Boolean);
-      if (parts.length > 0) filename = decodeURIComponent(parts[parts.length - 1]);
+      if (parts.length > 0) {
+        filename = decodeURIComponent(parts[parts.length - 1]);
+        const dotIdx = filename.lastIndexOf('.');
+        if (dotIdx > 0) ext = filename.slice(dotIdx + 1).toLowerCase();
+      }
     } catch (e) {}
 
+    const isApk = /\.apk($|\?)/i.test(url) || ext === 'apk';
+    const isImg = /\.(jpg|jpeg|png|gif|webp|svg|bmp|heic)($|\?)/i.test(url) || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext);
+    const isDoc = /\.(pdf|doc|docx|xls|xlsx|ppt|pptx|txt|epub)($|\?)/i.test(url) || ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt'].includes(ext);
+    const isArc = /\.(zip|rar|7z|tar|gz|bz2|iso)($|\?)/i.test(url) || ['zip', 'rar', '7z', 'tar', 'gz', 'iso'].includes(ext);
+    const isAud = /\.(mp3|flac|wav|aac|m4a|ogg)($|\?)/i.test(url) || ['mp3', 'flac', 'wav', 'aac', 'm4a', 'ogg'].includes(ext) || mode === 'audio';
+    const isVid = /\.(mp4|mkv|webm|mov|avi|flv|ts|m3u8)($|\?)/i.test(url) || ['mp4', 'mkv', 'webm', 'mov', 'avi', 'flv'].includes(ext) || mode === 'video';
+
+    let category = 'file';
+    let coverText = '通用文件';
+
+    if (isApk) {
+      category = 'apk';
+      coverText = 'Android APK';
+      ext = 'apk';
+    } else if (isImg) {
+      category = 'picture';
+      coverText = '高清原图';
+    } else if (isDoc) {
+      category = 'document';
+      coverText = '文档文件';
+    } else if (isArc) {
+      category = 'archive';
+      coverText = '压缩档案';
+    } else if (isAud) {
+      category = 'audio';
+      coverText = '无损音乐';
+      ext = 'mp3';
+    } else if (isVid) {
+      category = 'video';
+      coverText = '高清视频';
+      ext = 'mp4';
+    }
+
     return {
-      platform: 'generic',
-      title: filename || '在线文件',
+      platform: 'direct',
+      title: filename,
+      cover: isImg ? url : this.createSvgCover(coverText),
       downloadUrl: url,
-      category: isAudio ? 'audio' : isVideo ? 'video' : 'file',
-      extension: isAudio ? 'mp3' : isVideo ? 'mp4' : 'bin'
+      category: category,
+      extension: ext
     };
   }
 };

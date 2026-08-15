@@ -508,24 +508,87 @@ public class MainActivity extends AppCompatActivity {
                             downloadDir.mkdirs();
                         }
 
-                        // Dynamically check real MIME Content-Type
-                        String contentType = conn.getContentType();
-                        boolean realIsVideo = isVideo;
-                        if (contentType != null) {
-                            String lower = contentType.toLowerCase();
-                            if (lower.contains("video") || lower.contains("mp4") || lower.contains("octet-stream")) {
-                                realIsVideo = true;
-                            } else if (lower.contains("audio") || lower.contains("mpeg") || lower.contains("mp3")) {
-                                realIsVideo = false;
+                        // Follow all redirects with proper User-Agent
+                        String currentUrl = downloadUrl;
+                        java.net.HttpURLConnection conn = null;
+                        for (int i = 0; i < 6; i++) {
+                            conn = (java.net.HttpURLConnection) new java.net.URL(currentUrl).openConnection();
+                            conn.setInstanceFollowRedirects(true);
+                            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
+                            conn.setRequestProperty("Accept", "*/*");
+                            conn.connect();
+                            int code = conn.getResponseCode();
+                            if (code == 301 || code == 302 || code == 303 || code == 307 || code == 308) {
+                                String loc = conn.getHeaderField("Location");
+                                conn.disconnect();
+                                if (loc != null && !loc.isEmpty()) {
+                                    currentUrl = loc;
+                                    continue;
+                                }
+                            }
+                            break;
+                        }
+
+                        // 1. Filename & Extension Resolution from Content-Disposition / URL / Content-Type
+                        String finalFileName = "";
+                        String cd = conn.getHeaderField("Content-Disposition");
+                        if (cd != null && cd.contains("filename=")) {
+                            java.util.regex.Matcher m = java.util.regex.Pattern.compile("filename\\*?=['\"]?(?:UTF-8'')?([^;'\"]+)").matcher(cd);
+                            if (m.find()) {
+                                try {
+                                    finalFileName = java.net.URLDecoder.decode(m.group(1), "UTF-8");
+                                } catch (Exception ignored) {
+                                    finalFileName = m.group(1);
+                                }
                             }
                         }
 
-                        String safeTitle = (rawTitle != null ? rawTitle : "download_" + System.currentTimeMillis()).replaceAll("[\\\\/:*?\"<>|]", "_").trim();
-                        if (safeTitle.length() > 60) safeTitle = safeTitle.substring(0, 60);
-                        String ext = realIsVideo ? ".mp4" : ".mp3";
-                        final File targetFile = new File(downloadDir, safeTitle + ext);
+                        if (finalFileName.isEmpty()) {
+                            try {
+                                String path = new java.net.URL(currentUrl).getPath();
+                                String lastPart = path.substring(path.lastIndexOf('/') + 1);
+                                if (lastPart.contains(".") && !lastPart.endsWith(".")) {
+                                    finalFileName = java.net.URLDecoder.decode(lastPart, "UTF-8");
+                                }
+                            } catch (Exception ignored) {}
+                        }
 
-                        final long totalSize = conn.getContentLengthLong() > 0 ? conn.getContentLengthLong() : 11 * 1024 * 1024;
+                        String contentType = conn.getContentType();
+                        String mimeType = "application/octet-stream";
+                        String detectedExt = "";
+
+                        if (contentType != null) {
+                            String lower = contentType.toLowerCase();
+                            if (lower.contains("video/mp4")) { detectedExt = ".mp4"; mimeType = "video/mp4"; }
+                            else if (lower.contains("video/webm")) { detectedExt = ".webm"; mimeType = "video/webm"; }
+                            else if (lower.contains("video")) { detectedExt = ".mp4"; mimeType = "video/mp4"; }
+                            else if (lower.contains("audio/mpeg") || lower.contains("audio/mp3")) { detectedExt = ".mp3"; mimeType = "audio/mpeg"; }
+                            else if (lower.contains("audio/ogg")) { detectedExt = ".ogg"; mimeType = "audio/ogg"; }
+                            else if (lower.contains("audio/wav")) { detectedExt = ".wav"; mimeType = "audio/wav"; }
+                            else if (lower.contains("audio")) { detectedExt = ".mp3"; mimeType = "audio/mpeg"; }
+                            else if (lower.contains("application/vnd.android.package-archive")) { detectedExt = ".apk"; mimeType = "application/vnd.android.package-archive"; }
+                            else if (lower.contains("image/jpeg")) { detectedExt = ".jpg"; mimeType = "image/jpeg"; }
+                            else if (lower.contains("image/png")) { detectedExt = ".png"; mimeType = "image/png"; }
+                            else if (lower.contains("image/webp")) { detectedExt = ".webp"; mimeType = "image/webp"; }
+                            else if (lower.contains("image/gif")) { detectedExt = ".gif"; mimeType = "image/gif"; }
+                            else if (lower.contains("application/pdf")) { detectedExt = ".pdf"; mimeType = "application/pdf"; }
+                            else if (lower.contains("application/zip")) { detectedExt = ".zip"; mimeType = "application/zip"; }
+                        }
+
+                        if (finalFileName.isEmpty()) {
+                            String safeTitle = (rawTitle != null ? rawTitle : "download_" + System.currentTimeMillis()).replaceAll("[\\\\/:*?\"<>|]", "_").trim();
+                            if (safeTitle.length() > 60) safeTitle = safeTitle.substring(0, 60);
+                            if (safeTitle.matches(".*\\.[a-zA-Z0-9]{2,5}$")) {
+                                finalFileName = safeTitle;
+                            } else {
+                                String ext = !detectedExt.isEmpty() ? detectedExt : (isVideo ? ".mp4" : ".bin");
+                                finalFileName = safeTitle + ext;
+                            }
+                        }
+
+                        final File targetFile = new File(downloadDir, finalFileName.replaceAll("[\\\\/:*?\"<>|]", "_"));
+
+                        final long totalSize = conn.getContentLengthLong() > 0 ? conn.getContentLengthLong() : 10 * 1024 * 1024;
                         in = conn.getInputStream();
                         out = new java.io.FileOutputStream(targetFile);
 
@@ -562,19 +625,23 @@ public class MainActivity extends AppCompatActivity {
                         out.close();
                         in.close();
 
-                        // 100% Real Physical File Saved: Register into Android System MediaStore & Gallery
+                        // Register MediaStore for Video / Audio / Images
                         final String absolutePath = targetFile.getAbsolutePath();
-                        String mimeType = realIsVideo ? "video/mp4" : "audio/mpeg";
-                        MediaScannerConnection.scanFile(MainActivity.this,
-                                new String[]{absolutePath},
-                                new String[]{mimeType},
-                                null);
+                        String lowerName = finalFileName.toLowerCase();
+                        if (lowerName.endsWith(".mp4") || lowerName.endsWith(".mkv") || lowerName.endsWith(".webm")) {
+                            MediaScannerConnection.scanFile(MainActivity.this, new String[]{absolutePath}, new String[]{"video/mp4"}, null);
+                        } else if (lowerName.endsWith(".mp3") || lowerName.endsWith(".flac") || lowerName.endsWith(".wav") || lowerName.endsWith(".m4a")) {
+                            MediaScannerConnection.scanFile(MainActivity.this, new String[]{absolutePath}, new String[]{"audio/mpeg"}, null);
+                        } else if (lowerName.endsWith(".jpg") || lowerName.endsWith(".png") || lowerName.endsWith(".webp") || lowerName.endsWith(".gif")) {
+                            MediaScannerConnection.scanFile(MainActivity.this, new String[]{absolutePath}, new String[]{"image/jpeg"}, null);
+                        }
 
+                        final String finalMime = mimeType;
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
                                 if (webView != null) {
-                                    webView.evaluateJavascript("window.onNativeDownloadCompleted && window.onNativeDownloadCompleted('" + taskId + "', '" + absolutePath.replace("\\", "\\\\").replace("'", "\\'") + "');", null);
+                                    webView.evaluateJavascript("window.onNativeDownloadCompleted && window.onNativeDownloadCompleted('" + taskId + "', '" + absolutePath.replace("\\", "\\\\").replace("'", "\\'") + "', '" + finalMime + "');", null);
                                 }
                             }
                         });
@@ -588,6 +655,51 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             }).start();
+        }
+
+        @JavascriptInterface
+        public void openDownloadedFile(final String filePath, final String mimeType) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        File file = new File(filePath);
+                        if (!file.exists()) return;
+
+                        Uri uri;
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                            uri = androidx.core.content.FileProvider.getUriForFile(
+                                    MainActivity.this,
+                                    getPackageName() + ".fileprovider",
+                                    file
+                            );
+                        } else {
+                            uri = Uri.fromFile(file);
+                        }
+
+                        String effectiveMime = (mimeType != null && !mimeType.isEmpty() && !mimeType.equals("null")) ? mimeType : "*/*";
+                        if (filePath.toLowerCase().endsWith(".apk")) {
+                            effectiveMime = "application/vnd.android.package-archive";
+                        } else if (filePath.toLowerCase().endsWith(".pdf")) {
+                            effectiveMime = "application/pdf";
+                        } else if (filePath.toLowerCase().endsWith(".zip")) {
+                            effectiveMime = "application/zip";
+                        }
+
+                        Intent intent = new Intent(Intent.ACTION_VIEW);
+                        intent.setDataAndType(uri, effectiveMime);
+                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(Intent.createChooser(intent, "打开文件: " + file.getName()));
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void installApk(final String filePath) {
+            openDownloadedFile(filePath, "application/vnd.android.package-archive");
         }
     }
 }
