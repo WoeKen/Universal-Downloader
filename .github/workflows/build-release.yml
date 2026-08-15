@@ -60,21 +60,27 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Setup Gradle 8.5
-        uses: gradle/actions/setup-gradle@v3
+      - name: Accept Android Licenses
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.5'
-          cache-disabled: true
 
       - name: Build Android APK
         run: |
           cd android
-          gradle assembleDebug --no-daemon
+          gradle wrapper --gradle-version 8.5 || true
+          chmod +x gradlew || true
+          ./gradlew assembleDebug --no-daemon --stacktrace || gradle assembleDebug --no-daemon --stacktrace
 
       - name: Prepare APK Output
         run: |
           mkdir -p dist
           find android/app/build/outputs/apk -name "*.apk" -exec cp {} dist/Universal-Downloader-v1.1.9-Android.apk \;
+          ls -la dist/
 
       - name: Upload Android Artifact
         uses: actions/upload-artifact@v4
