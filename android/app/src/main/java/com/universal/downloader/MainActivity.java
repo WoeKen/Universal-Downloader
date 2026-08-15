@@ -78,10 +78,12 @@ public class MainActivity extends AppCompatActivity {
             if ("text/plain".equals(type)) {
                 String sharedText = intent.getStringExtra(Intent.EXTRA_TEXT);
                 if (sharedText != null && !sharedText.trim().isEmpty()) {
+                    java.util.regex.Matcher m = java.util.regex.Pattern.compile("(https?://[\\w\\-._~:/?#\\[\\]@!$&'()*+,;=%]+)").matcher(sharedText);
+                    String cleanUrl = m.find() ? m.group(1).replaceAll("[\\u4e00-\\u9fa5)\\]}>,;。，！？、“”‘’]+$", "") : sharedText;
                     if (webView != null && webView.getProgress() == 100) {
-                        dispatchSharedTextToWeb(sharedText);
+                        dispatchSharedTextToWeb(cleanUrl);
                     } else {
-                        pendingSharedText = sharedText;
+                        pendingSharedText = cleanUrl;
                     }
                 }
             }

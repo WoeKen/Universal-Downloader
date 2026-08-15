@@ -4,11 +4,15 @@
  */
 
 const MobileParsers = {
-  // Extract clean URL from messy copied share text
+  // Extract clean URL from messy copied share text (e.g. 抖音淘口令、文案、乱码中文字符混杂)
   extractUrl(text) {
     if (!text) return '';
-    const match = text.match(/(https?:\/\/[^\s\u4e00-\u9fa5]+)/i);
-    return match ? match[1].replace(/[)\]}>,;]+$/, '') : '';
+    const match = text.match(/(https?:\/\/[a-zA-Z0-9\-._~:/?#[\]@!$&'()*+,;=%]+)/i);
+    if (match) {
+      // Clean trailing Chinese punctuation, quotes, brackets, and full-width characters
+      return match[1].replace(/[\u4e00-\u9fa5)\]}>,;。，！？、“”‘’]+$/, '').trim();
+    }
+    return '';
   },
 
   // Identify platform from URL
