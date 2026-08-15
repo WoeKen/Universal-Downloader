@@ -152,27 +152,38 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @JavascriptInterface
-        public void resolveNativeMedia(final String rawUrl, final String callbackId) {
+        public void resolveNativeMedia(final String rawInput, final String callbackId) {
             new Thread(new Runnable() {
                 @Override
                 public void run() {
                     try {
-                        String targetUrl = rawUrl;
-                        java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(rawUrl).openConnection();
-                        conn.setInstanceFollowRedirects(false);
-                        conn.setRequestProperty("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X)");
-                        conn.connect();
-                        int code = conn.getResponseCode();
-                        if (code == 301 || code == 302 || code == 307) {
-                            String loc = conn.getHeaderField("Location");
-                            if (loc != null && !loc.isEmpty()) {
-                                targetUrl = loc;
-                            }
-                        }
-                        conn.disconnect();
+                        // 1. Extract pure clean URL from messy Chinese/emoji text
+                        java.util.regex.Matcher urlMatcher = java.util.regex.Pattern.compile("(https?://[\\w\\-._~:/?#\\[\\]@!$&'()*+,;=%]+)").matcher(rawInput);
+                        String cleanUrl = urlMatcher.find() ? urlMatcher.group(1).replaceAll("[\\u4e00-\\u9fa5)\\]}>,;。，！？、“”‘’]+$", "") : rawInput.trim();
 
+                        // 2. Follow redirects (up to 6 hops) with real mobile User-Agent
+                        String currentUrl = cleanUrl;
+                        for (int hop = 0; hop < 6; hop++) {
+                            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(currentUrl).openConnection();
+                            conn.setInstanceFollowRedirects(false);
+                            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X)");
+                            conn.connect();
+                            int code = conn.getResponseCode();
+                            if (code == 301 || code == 302 || code == 303 || code == 307 || code == 308) {
+                                String loc = conn.getHeaderField("Location");
+                                conn.disconnect();
+                                if (loc != null && !loc.isEmpty()) {
+                                    currentUrl = loc;
+                                    continue;
+                                }
+                            }
+                            conn.disconnect();
+                            break;
+                        }
+
+                        // 3. Extract Video ID from redirected Long URL
                         String videoId = "";
-                        java.util.regex.Matcher m = java.util.regex.Pattern.compile("/video/(\\d+)").matcher(targetUrl);
+                        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?:video/|modal_id=|item_ids=)(\\d+)").matcher(currentUrl);
                         if (m.find()) {
                             videoId = m.group(1);
                         }
@@ -206,19 +217,38 @@ public class MainActivity extends AppCompatActivity {
                                         }
                                     }
                                     org.json.JSONObject playObj = videoObj.optJSONObject("play_addr");
-                                    String playUrl = "";
+                                    String rawPlayUrl = "";
                                     if (playObj != null) {
                                         org.json.JSONArray plays = playObj.optJSONArray("url_list");
                                         if (plays != null && plays.length() > 0) {
-                                            playUrl = plays.getString(0).replace("playwm", "play");
+                                            rawPlayUrl = plays.getString(0).replace("playwm", "play");
                                         }
+                                    }
+
+                                    // Resolve final video stream redirect
+                                    String finalPlayUrl = rawPlayUrl;
+                                    if (!rawPlayUrl.isEmpty()) {
+                                        try {
+                                            java.net.HttpURLConnection playConn = (java.net.HttpURLConnection) new java.net.URL(rawPlayUrl).openConnection();
+                                            playConn.setInstanceFollowRedirects(false);
+                                            playConn.setRequestProperty("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X)");
+                                            playConn.connect();
+                                            int pCode = playConn.getResponseCode();
+                                            if (pCode == 301 || pCode == 302 || pCode == 307) {
+                                                String pLoc = playConn.getHeaderField("Location");
+                                                if (pLoc != null && !pLoc.isEmpty()) {
+                                                    finalPlayUrl = pLoc;
+                                                }
+                                            }
+                                            playConn.disconnect();
+                                        } catch (Exception ignored) {}
                                     }
 
                                     final org.json.JSONObject result = new org.json.JSONObject();
                                     result.put("platform", "douyin");
                                     result.put("title", title);
                                     result.put("cover", cover);
-                                    result.put("downloadUrl", playUrl);
+                                    result.put("downloadUrl", finalPlayUrl);
                                     result.put("category", "video");
 
                                     runOnUiThread(new Runnable() {

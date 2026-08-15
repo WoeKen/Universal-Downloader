@@ -134,6 +134,16 @@
     draw();
   }
 
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   // 3. Task Rendering & Management
   function renderTaskList() {
     const listEl = document.getElementById('mobileTaskList');
@@ -148,20 +158,23 @@
 
     if (emptyEl) emptyEl.style.display = filtered.length ? 'none' : 'flex';
 
+    const defaultVideoSvg = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="46" height="46"><rect width="46" height="46" fill="#111"/><text x="23" y="28" fill="#00f2fe" text-anchor="middle" font-size="14" font-weight="bold">MP4</text></svg>');
+    const defaultAudioSvg = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="46" height="46"><rect width="46" height="46" fill="#111"/><text x="23" y="28" fill="#34c759" text-anchor="middle" font-size="14" font-weight="bold">MP3</text></svg>');
+
     listEl.innerHTML = filtered.map(t => {
       const isDone = t.status === 'completed';
       const isVideo = t.category === 'video';
-      const isAudio = t.category === 'audio';
-      const thumb = t.cover || (isVideo ? 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="46" height="46"><rect width="46" height="46" fill="%23000"/><text x="23" y="28" fill="%2300f2fe" text-anchor="middle" font-size="16" font-weight="bold">MP4</text></svg>' : 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="46" height="46"><rect width="46" height="46" fill="%23000"/><text x="23" y="28" fill="%2334c759" text-anchor="middle" font-size="16" font-weight="bold">MP3</text></svg>');
+      const thumb = t.cover || (isVideo ? defaultVideoSvg : defaultAudioSvg);
+      const safeTitle = escapeHtml(t.title || '下载任务');
 
       return `
         <div class="mobile-task-card" data-id="${t.id}">
           <div class="task-top-meta">
-            <img class="task-thumb" src="${thumb}" alt="">
+            <img class="task-thumb" src="${thumb}" alt="" onerror="this.src='${defaultVideoSvg}'">
             <div class="task-info-block">
-              <div class="task-title" title="${t.title}">${t.title || '下载任务'}</div>
+              <div class="task-title" title="${safeTitle}">${safeTitle}</div>
               <div class="task-sub-meta">
-                <span>${t.platform ? t.platform.toUpperCase() : 'DIRECT'}</span>
+                <span>${t.platform ? escapeHtml(t.platform.toUpperCase()) : 'DIRECT'}</span>
                 <span>${formatBytes(t.downloaded || 0)} / ${t.size ? formatBytes(t.size) : '计算中...'}</span>
               </div>
             </div>

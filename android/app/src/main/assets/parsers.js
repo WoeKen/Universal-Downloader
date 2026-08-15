@@ -56,6 +56,12 @@ const MobileParsers = {
     }
   },
 
+  // Helper to create clean URL-safe SVG Data URI
+  createSvgCover(text, bgGradient = 'linear-gradient(135deg, #090c10 0%, #00f2fe 100%)') {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300"><rect width="100%" height="100%" fill="#090c10"/><circle cx="150" cy="130" r="50" fill="rgba(0,242,254,0.15)" stroke="#00f2fe" stroke-width="3"/><polygon points="140,110 170,130 140,150" fill="#00f2fe"/><text x="50%" y="220" fill="#ffffff" font-size="22" font-weight="bold" text-anchor="middle" font-family="sans-serif">${text}</text></svg>`;
+    return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+  },
+
   // 1. 抖音 100% 纯净无水印解析
   async parseDouyin(url) {
     // 1. Try Native Android Bridge first (Zero CORS, 100% Native HTTP Redirect Resolution)
@@ -63,7 +69,7 @@ const MobileParsers = {
       try {
         const nativeResult = await new Promise((resolve) => {
           const callbackId = 'cb_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-          const timer = setTimeout(() => resolve(null), 4000);
+          const timer = setTimeout(() => resolve(null), 5000);
           window['onNativeMediaResolved_' + callbackId] = (dataStr) => {
             clearTimeout(timer);
             try {
@@ -79,7 +85,7 @@ const MobileParsers = {
           return {
             platform: 'douyin',
             title: nativeResult.title || '抖音无水印高清视频',
-            cover: nativeResult.cover || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%23111"/><stop offset="100%" stop-color="%2300f2fe"/></linearGradient></defs><rect width="100%" height="100%" fill="url(%23g)"/><text x="50%" y="50%" fill="%23fff" font-size="28" font-weight="900" text-anchor="middle" font-family="sans-serif">🎵 抖音精选视频</text></svg>',
+            cover: nativeResult.cover || this.createSvgCover('抖音精选原画'),
             downloadUrl: nativeResult.downloadUrl,
             category: 'video',
             extension: 'mp4'
@@ -107,7 +113,7 @@ const MobileParsers = {
             return {
               platform: 'douyin',
               title: title,
-              cover: cover || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400"><rect width="100%" height="100%" fill="%23111"/><text x="50%" y="50%" fill="%2300f2fe" font-size="24" font-weight="bold" text-anchor="middle">抖音短视频</text></svg>',
+              cover: cover || this.createSvgCover('抖音短视频'),
               downloadUrl: play,
               category: 'video',
               extension: 'mp4'
@@ -123,7 +129,7 @@ const MobileParsers = {
     return {
       platform: 'douyin',
       title: '抖音无水印高清视频',
-      cover: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%23090c10"/><stop offset="100%" stop-color="%2300f2fe"/></linearGradient></defs><rect width="100%" height="100%" fill="url(%23g)"/><circle cx="150" cy="180" r="40" fill="rgba(0,242,254,0.2)" stroke="%2300f2fe" stroke-width="3"/><polygon points="142,165 165,180 142,195" fill="%23fff"/><text x="50%" y="260" fill="%23fff" font-size="20" font-weight="bold" text-anchor="middle" font-family="sans-serif">抖音精选原画</text></svg>',
+      cover: this.createSvgCover('抖音精选原画'),
       downloadUrl: url,
       category: 'video',
       extension: 'mp4'
