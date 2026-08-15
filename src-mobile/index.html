@@ -131,44 +131,65 @@
       </button>
     </nav>
 
-    <!-- Smart Adaptive In-App Video & Audio Player Modal -->
+    <!-- Flagship Supreme In-App Media Player Modal -->
     <div id="mediaModal" class="mobile-modal hidden">
       <div class="modal-backdrop"></div>
-      <div class="modal-sheet glass-card media-player-sheet">
+      <div class="modal-sheet glass-card flagship-player-sheet">
         <div class="sheet-header">
           <div class="sheet-drag-handle"></div>
-          <h3 id="mediaTitle" class="sheet-title">🎬 视频播放</h3>
+          <div class="player-header-title-wrap">
+            <span id="playerTypeBadge" class="player-badge">🎬 视频</span>
+            <h3 id="mediaTitle" class="sheet-title player-sheet-title">极清视频预览</h3>
+          </div>
           <button id="closeMediaModalBtn" class="close-btn">&times;</button>
         </div>
-        <div class="sheet-body">
-          <!-- Video Section -->
-          <div id="videoContainer" class="video-theatre-box">
-            <video id="nativeVideoPlayer" controls playsinline preload="auto"></video>
+        
+        <div class="sheet-body player-sheet-body">
+          <!-- Video Cinema Box -->
+          <div id="videoContainer" class="cinema-video-wrap">
+            <video id="nativeVideoPlayer" controls playsinline preload="auto" class="cinema-video-element"></video>
+            <div class="cinema-video-footer">
+              <span id="videoQualityTag" class="cinema-meta-tag">✨ 1080P 超清 · 纯净无水印</span>
+              <span class="cinema-status-tag">物理原画</span>
+            </div>
           </div>
 
-          <!-- Audio Section -->
-          <div id="audioContainer" class="audio-theatre-box hidden">
-            <div class="vinyl-disc-wrap">
-              <div id="mobileVinylDisc" class="vinyl-disc">
-                <div id="vinylCoverImg" class="vinyl-center"></div>
+          <!-- Audio Luxury Vinyl Box -->
+          <div id="audioContainer" class="luxury-audio-wrap hidden">
+            <div class="turntable-stage">
+              <div id="mobileVinylDisc" class="vinyl-disc-flagship">
+                <div id="vinylCoverImg" class="vinyl-center-art"></div>
+              </div>
+              <div class="audio-spectrum-anim">
+                <span class="spec-bar s1"></span>
+                <span class="spec-bar s2"></span>
+                <span class="spec-bar s3"></span>
+                <span class="spec-bar s4"></span>
+                <span class="spec-bar s5"></span>
+                <span class="spec-bar s4"></span>
+                <span class="spec-bar s2"></span>
               </div>
             </div>
-            <div class="audio-meta-wrap">
-              <h4 id="audioMetaTitle" class="audio-meta-title">无损音乐原声</h4>
-              <p id="audioMetaAuthor" class="audio-meta-author">Universal Audio Engine</p>
+            <div class="audio-meta-card">
+              <h4 id="audioMetaTitle" class="audio-flagship-title">无损音乐原声</h4>
+              <p id="audioMetaAuthor" class="audio-flagship-artist">Universal Studio Master · 320kbps</p>
             </div>
-            <audio id="nativeAudioPlayer" controls class="custom-audio-bar"></audio>
+            <audio id="nativeAudioPlayer" controls class="flagship-audio-bar"></audio>
           </div>
 
-          <!-- Smart Quick Actions -->
-          <div class="media-actions-row">
-            <button id="saveToGalleryBtn" class="sheet-action-btn primary">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-              <span id="saveActionText">保存至系统相册</span>
+          <!-- Flagship Quick Action Buttons -->
+          <div class="player-actions-grid">
+            <button id="saveToGalleryBtn" class="player-action-pill primary">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              <span id="saveActionText">保存至相册</span>
             </button>
-            <button id="shareFileBtn" class="sheet-action-btn secondary">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+            <button id="shareFileBtn" class="player-action-pill secondary">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
               <span>系统分享</span>
+            </button>
+            <button id="copyMediaUrlBtn" class="player-action-pill ghost">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              <span>复制链接</span>
             </button>
           </div>
         </div>

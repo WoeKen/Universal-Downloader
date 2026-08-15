@@ -711,122 +711,235 @@ body.light-theme .brand-title {
   display: none !important;
 }
 
-.video-theatre-box {
-  width: 100%;
-  border-radius: var(--radius-md);
-  background: #000;
-  overflow: hidden;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-bottom: 4px;
+/* Flagship Media Player Luxury Styles */
+.flagship-player-sheet {
+  max-height: 90vh;
+  padding: 16px 18px calc(18px + var(--safe-bottom));
 }
 
-.video-theatre-box video {
+.player-header-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 80%;
+}
+
+.player-badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(0, 242, 254, 0.15);
+  color: var(--accent-cyan);
+  border: 1px solid var(--accent-cyan);
+}
+
+.player-sheet-title {
+  font-size: 14px;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 1. Cinema Video Theatre Container */
+.cinema-video-wrap {
   width: 100%;
-  max-height: 52vh;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
+  background: #000;
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+}
+
+.cinema-video-element {
+  width: 100%;
+  max-height: 48vh;
+  object-fit: contain;
   background: #000;
   outline: none;
 }
 
-.audio-theatre-box {
+.cinema-video-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(14, 18, 28, 0.95);
+  border-top: 1px solid var(--glass-border-subtle);
+}
+
+.cinema-meta-tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-cyan);
+}
+
+.cinema-status-tag {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent-green);
+  background: rgba(52, 199, 89, 0.12);
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+/* 2. Luxury Audio Turntable */
+.luxury-audio-wrap {
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 8px 0;
+  gap: 14px;
+  padding: 10px 0;
 }
 
-.audio-meta-wrap {
+.turntable-stage {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vinyl-disc-flagship {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #1a1a1a 15%, #0d0d0d 40%, #000000 75%);
+  border: 4px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), inset 0 0 12px rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: vinylSpin 8s linear infinite;
+  animation-play-state: paused;
+}
+
+.vinyl-disc-flagship.playing {
+  animation-play-state: running;
+}
+
+.vinyl-center-art {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+  border: 2.5px solid #fff;
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes vinylSpin {
+  100% { transform: rotate(360deg); }
+}
+
+.audio-spectrum-anim {
+  position: absolute;
+  bottom: 0;
+  display: flex;
+  gap: 3px;
+  align-items: flex-end;
+  height: 16px;
+}
+
+.spec-bar {
+  width: 3px;
+  background: var(--accent-cyan);
+  border-radius: 2px;
+  animation: specPulse 1.2s ease-in-out infinite alternate;
+}
+
+.spec-bar.s1 { height: 6px; animation-delay: 0.1s; }
+.spec-bar.s2 { height: 12px; animation-delay: 0.3s; }
+.spec-bar.s3 { height: 16px; animation-delay: 0.5s; }
+.spec-bar.s4 { height: 10px; animation-delay: 0.2s; }
+.spec-bar.s5 { height: 14px; animation-delay: 0.4s; }
+
+@keyframes specPulse {
+  0% { transform: scaleY(0.3); }
+  100% { transform: scaleY(1); }
+}
+
+.audio-meta-card {
   text-align: center;
   width: 100%;
-  padding: 0 10px;
 }
 
-.audio-meta-title {
-  font-size: 14px;
-  font-weight: 700;
+.audio-flagship-title {
+  font-size: 15px;
+  font-weight: 800;
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.audio-meta-author {
-  font-size: 11px;
+.audio-flagship-artist {
+  font-size: 11.5px;
   color: var(--text-muted);
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
-.custom-audio-bar {
+.flagship-audio-bar {
   width: 100%;
+  filter: invert(1) hue-rotate(180deg);
+  border-radius: var(--radius-sm);
+}
+
+/* 3. Flagship Action Buttons Grid */
+.player-actions-grid {
+  display: grid;
+  grid-template-columns: 1.3fr 1.1fr 1fr;
+  gap: 8px;
   margin-top: 4px;
 }
 
-.vinyl-disc-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10px 0;
-}
-
-.vinyl-disc {
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  background: radial-gradient(circle, #222 20%, #111 50%, #000 80%);
-  border: 4px solid #333;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: spin 8s linear infinite;
-  animation-play-state: paused;
-}
-
-.vinyl-disc.playing {
-  animation-play-state: running;
-}
-
-.vinyl-center {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
-  border: 2px solid #fff;
-  background-size: cover;
-  background-position: center;
-}
-
-@keyframes spin {
-  100% { transform: rotate(360deg); }
-}
-
-.media-actions-row {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 14px;
-}
-
-.sheet-action-btn {
-  width: 100%;
+.player-action-pill {
   height: 42px;
   border-radius: var(--radius-md);
   border: none;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.sheet-action-btn.primary {
+.player-action-pill.primary {
   background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
   color: #fff;
+  box-shadow: 0 4px 16px rgba(0, 242, 254, 0.35);
+}
+
+.player-action-pill.secondary {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+}
+
+.player-action-pill.ghost {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border-subtle);
+  color: var(--text-secondary);
+}
+
+.player-action-pill:active {
+  transform: scale(0.96);
 }
 
 .sheet-action-btn.secondary {

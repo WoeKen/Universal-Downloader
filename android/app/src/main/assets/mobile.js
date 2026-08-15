@@ -308,45 +308,60 @@
     }
   };
 
-  // 5. In-App Media Player Modal (Smart Adaptive Segregation)
+  // 5. In-App Media Player Modal (Flagship Aesthetic Experience)
   function openMediaModal(task) {
     activePlayingTask = task;
     const modal = document.getElementById('mediaModal');
     const titleEl = document.getElementById('mediaTitle');
+    const badgeEl = document.getElementById('playerTypeBadge');
     const videoBox = document.getElementById('videoContainer');
     const audioBox = document.getElementById('audioContainer');
     const video = document.getElementById('nativeVideoPlayer');
     const audio = document.getElementById('nativeAudioPlayer');
     const disc = document.getElementById('mobileVinylDisc');
+    const vinylCenter = document.getElementById('vinylCoverImg');
     const saveActionText = document.getElementById('saveActionText');
 
     modal.classList.remove('hidden');
 
     if (task.category === 'audio') {
-      titleEl.textContent = '🎵 音频无损播放';
+      if (badgeEl) badgeEl.textContent = '🎵 音乐';
+      titleEl.textContent = task.title || '无损音乐原声';
       videoBox.style.display = 'none';
       audioBox.style.display = 'flex';
       videoBox.classList.add('hidden');
       audioBox.classList.remove('hidden');
       document.getElementById('audioMetaTitle').textContent = task.title || '无损音乐原声';
-      if (saveActionText) saveActionText.textContent = '保存至系统音乐库';
+      if (task.cover && vinylCenter) {
+        vinylCenter.style.backgroundImage = `url(${task.cover})`;
+      }
+      if (saveActionText) saveActionText.textContent = '保存音乐';
       audio.src = task.url;
       audio.play().catch(() => {});
       disc.classList.add('playing');
       audio.onpause = () => disc.classList.remove('playing');
       audio.onplay = () => disc.classList.add('playing');
     } else {
-      titleEl.textContent = '🎬 视频极清播放';
+      if (badgeEl) badgeEl.textContent = '🎬 视频';
+      titleEl.textContent = task.title || '极清视频预览';
       audioBox.style.display = 'none';
       videoBox.style.display = 'flex';
       audioBox.classList.add('hidden');
       videoBox.classList.remove('hidden');
-      if (saveActionText) saveActionText.textContent = '保存至手机相册';
+      if (saveActionText) saveActionText.textContent = '保存相册';
       if (task.cover) video.poster = task.cover;
       video.src = task.url;
       video.play().catch(() => {});
     }
   }
+
+  document.getElementById('copyMediaUrlBtn')?.addEventListener('click', () => {
+    if (activePlayingTask && activePlayingTask.url) {
+      navigator.clipboard?.writeText(activePlayingTask.url);
+      triggerHaptic('success');
+      showToast('📋 媒体播放源链已复制到剪贴板！');
+    }
+  });
 
   function closeMediaModal() {
     const modal = document.getElementById('mediaModal');
