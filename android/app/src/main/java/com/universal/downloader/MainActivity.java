@@ -20,15 +20,27 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        // 1. Enable Hardware GPU Acceleration for 120Hz smooth animations
+        getWindow().setFlags(android.view.WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED, 
+                               android.view.WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED);
+
         webView = new WebView(this);
+        webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null);
         setContentView(webView);
 
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
+        settings.setDatabaseEnabled(true);
         settings.setAllowFileAccess(true);
+        settings.setAllowContentAccess(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        settings.setLoadsImagesAutomatically(true);
+        settings.setLoadWithOverviewMode(true);
+        settings.setUseWideViewPort(true);
 
         webView.addJavascriptInterface(new AndroidNativeBridge(), "NativeAndroid");
 
@@ -43,7 +55,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Load Liquid Glass Mobile UI
+        // Load Liquid Glass Mobile UI with zero-latency asset pipeline
         webView.loadUrl("file:///android_asset/index.html");
 
         handleIncomingIntent(getIntent());
