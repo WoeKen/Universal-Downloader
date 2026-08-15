@@ -447,10 +447,21 @@
       if (copyVal) {
         navigator.clipboard?.writeText(copyVal);
         triggerHaptic('success');
-        showToast(`📋 已成功复制: ${copyVal}`);
       } else if (openUrl) {
         triggerHaptic();
-        window.open(openUrl, '_blank');
+        if (window.NativeAndroid?.openDeepLink) {
+          window.NativeAndroid.openDeepLink(openUrl);
+        } else {
+          const fallback = e.target.dataset.fallback;
+          try {
+            window.location.href = openUrl;
+          } catch (err) {}
+          if (fallback) {
+            setTimeout(() => {
+              window.open(fallback, '_blank');
+            }, 1500);
+          }
+        }
       } else if (qrTarget) {
         document.querySelectorAll('.qr-tab').forEach(t => t.classList.remove('active'));
         e.target.classList.add('active');

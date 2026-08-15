@@ -114,17 +114,26 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @JavascriptInterface
-        public void shareFile(String filePath) {
+        public void openDeepLink(String url) {
             try {
-                File file = new File(filePath);
-                if (file.exists()) {
-                    Intent shareIntent = new Intent(Intent.ACTION_SEND);
-                    shareIntent.setType("video/*");
-                    shareIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(file));
-                    startActivity(Intent.createChooser(shareIntent, "分享到"));
-                }
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
             } catch (Exception e) {
-                e.printStackTrace();
+                try {
+                    // Fallback to web browser if native app not installed
+                    if (url.startsWith("tg://")) {
+                        Intent webIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/woeken318"));
+                        webIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(webIntent);
+                    } else if (url.startsWith("whatsapp://")) {
+                        Intent webIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/12498978869"));
+                        webIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(webIntent);
+                    }
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
             }
         }
     }
