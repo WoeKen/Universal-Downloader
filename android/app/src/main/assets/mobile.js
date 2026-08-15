@@ -237,22 +237,39 @@
     }, 250);
   }
 
+  let currentFormatMode = 'auto';
+
+  // Format Mode Pill Switcher
+  document.querySelectorAll('.format-mode-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.format-mode-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFormatMode = btn.dataset.mode || 'auto';
+      triggerHaptic('selection');
+      const modeNames = { auto: '⚡ 智能自适应', video: '🎬 极清视频 (MP4)', audio: '🎵 提取音频 (MP3)' };
+      showToast(`透析模式已切换至: ${modeNames[currentFormatMode] || currentFormatMode}`);
+    });
+  });
+
   async function handleAddUrl(rawInput) {
     const text = rawInput || document.getElementById('mobileUrlInput')?.value?.trim();
     if (!text) return showToast('请先输入或粘贴下载链接');
 
     triggerHaptic();
-    showToast('🔍 正在启动智能解析与去水印透析...');
+    showToast(currentFormatMode === 'audio' ? '🎵 正在提取高品质纯音频原声...' : '🔍 正在启动智能去水印透析...');
 
     try {
-      const parsed = await window.MobileParsers.parseMedia(text);
+      const parsed = await window.MobileParsers.parseMedia(text, currentFormatMode);
+      const isVideo = parsed.category === 'video' || (currentFormatMode !== 'audio' && parsed.category !== 'audio');
+
       const newTask = {
         id: 'task_' + Date.now(),
         url: parsed.downloadUrl || text,
         title: parsed.title,
         cover: parsed.cover,
         platform: parsed.platform,
-        category: parsed.category,
+        category: isVideo ? 'video' : 'audio',
+        extension: isVideo ? 'mp4' : 'mp3',
         status: 'downloading',
         progress: 0,
         downloaded: 0,
@@ -265,10 +282,9 @@
       renderTaskList();
       document.getElementById('mobileUrlInput').value = '';
       triggerHaptic('success');
-      showToast('🚀 已进入高速下载队列！');
+      showToast(isVideo ? '🚀 极清视频已进入下载队列！' : '🎶 高品质音频已进入下载队列！');
 
       // Native Bridge or Internal Downloader
-      const isVideo = newTask.category === 'video' || ['instagram', 'douyin', 'tiktok', 'bilibili', 'youtube', 'twitter', 'kuaishou', 'xiaohongshu'].includes(newTask.platform) || !['audio', 'mp3', 'music'].includes(newTask.category);
       if (window.NativeAndroid?.startDownload) {
         window.NativeAndroid.startDownload(newTask.id, newTask.url, newTask.title, isVideo);
       } else {

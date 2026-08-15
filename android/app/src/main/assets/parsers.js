@@ -31,7 +31,7 @@ const MobileParsers = {
   },
 
   // Main Parser Entrypoint
-  async parseMedia(input) {
+  async parseMedia(input, mode = 'auto') {
     const rawUrl = this.extractUrl(input) || input.trim();
     if (!rawUrl) throw new Error('请输入有效的视频或下载链接');
 
@@ -39,23 +39,23 @@ const MobileParsers = {
 
     switch (platform) {
       case 'douyin':
-        return await this.parseDouyin(rawUrl);
+        return await this.parseDouyin(rawUrl, mode);
       case 'instagram':
-        return await this.parseInstagram(rawUrl);
+        return await this.parseInstagram(rawUrl, mode);
       case 'tiktok':
-        return await this.parseTikTok(rawUrl);
+        return await this.parseTikTok(rawUrl, mode);
       case 'twitter':
-        return await this.parseTwitter(rawUrl);
+        return await this.parseTwitter(rawUrl, mode);
       case 'bilibili':
-        return await this.parseBilibili(rawUrl);
+        return await this.parseBilibili(rawUrl, mode);
       case 'xiaohongshu':
-        return await this.parseXiaohongshu(rawUrl);
+        return await this.parseXiaohongshu(rawUrl, mode);
       case 'kuaishou':
-        return await this.parseKuaishou(rawUrl);
+        return await this.parseKuaishou(rawUrl, mode);
       case 'youtube':
-        return await this.parseYouTube(rawUrl);
+        return await this.parseYouTube(rawUrl, mode);
       default:
-        return await this.parseGeneric(rawUrl);
+        return await this.parseGeneric(rawUrl, mode);
     }
   },
 
@@ -65,9 +65,9 @@ const MobileParsers = {
     return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
   },
 
-  // 1. 抖音 100% 纯净无水印解析
-  async parseDouyin(url) {
-    // 1. Try Native Android Bridge first (Zero CORS, 100% Native Chromium Stream Interception)
+  // 1. 抖音 100% 纯净无水印/无损音乐解析
+  async parseDouyin(url, mode = 'auto') {
+    // 1. Try Native Android Bridge first
     if (window.NativeAndroid?.resolveNativeMedia) {
       try {
         const nativeResult = await new Promise((resolve) => {
@@ -91,17 +91,18 @@ const MobileParsers = {
             }
           };
 
-          window.NativeAndroid.resolveNativeMedia(url, callbackId);
+          window.NativeAndroid.resolveNativeMedia(url, callbackId, mode);
         });
 
         if (nativeResult && nativeResult.downloadUrl) {
+          const isAudioMode = mode === 'audio' || nativeResult.category === 'audio';
           return {
             platform: 'douyin',
-            title: nativeResult.title || '抖音无水印高清视频',
-            cover: nativeResult.cover || this.createSvgCover('抖音精选原画'),
+            title: nativeResult.title || (isAudioMode ? '抖音原声音频' : '抖音无水印高清视频'),
+            cover: nativeResult.cover || this.createSvgCover(isAudioMode ? '抖音原声' : '抖音精选原画'),
             downloadUrl: nativeResult.downloadUrl,
-            category: 'video',
-            extension: 'mp4'
+            category: isAudioMode ? 'audio' : 'video',
+            extension: isAudioMode ? 'mp3' : 'mp4'
           };
         }
       } catch (err) {

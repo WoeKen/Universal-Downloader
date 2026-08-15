@@ -153,17 +153,23 @@ public class MainActivity extends AppCompatActivity {
 
         @JavascriptInterface
         public void resolveNativeMedia(final String rawInput, final String callbackId) {
+            resolveNativeMedia(rawInput, callbackId, "auto");
+        }
+
+        @JavascriptInterface
+        public void resolveNativeMedia(final String rawInput, final String callbackId, final String formatMode) {
             new Thread(new Runnable() {
                 @Override
                 public void run() {
                     try {
+                        final String reqMode = (formatMode != null && !formatMode.isEmpty()) ? formatMode : "auto";
+
                         // 1. Extract pure clean URL from messy Chinese/emoji text
                         java.util.regex.Matcher urlMatcher = java.util.regex.Pattern.compile("(https?://[\\w\\-._~:/?#\\[\\]@!$&'()*+,;=%]+)").matcher(rawInput);
                         String cleanUrl = urlMatcher.find() ? urlMatcher.group(1).replaceAll("[\\u4e00-\\u9fa5)\\]}>,;。，！？、“”‘’]+$", "") : rawInput.trim();
 
                         // 2. Follow redirects to find target long URL & video ID
                         String currentUrl = cleanUrl;
-                        String cookiesHeader = "";
                         for (int hop = 0; hop < 6; hop++) {
                             java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(currentUrl).openConnection();
                             conn.setInstanceFollowRedirects(false);
@@ -217,7 +223,7 @@ public class MainActivity extends AppCompatActivity {
                                     result.put("title", igTitle);
                                     result.put("cover", igCover);
                                     result.put("downloadUrl", igVideo);
-                                    result.put("category", "video");
+                                    result.put("category", reqMode.equals("audio") ? "audio" : "video");
 
                                     runOnUiThread(new Runnable() {
                                         @Override
@@ -273,16 +279,57 @@ public class MainActivity extends AppCompatActivity {
                             org.json.JSONObject json = new org.json.JSONObject(sb.toString());
                             org.json.JSONObject awemeDetail = json.optJSONObject("aweme_detail");
                             if (awemeDetail != null) {
-                                String title = awemeDetail.optString("desc", "抖音无水印高清视频");
+                                String videoTitle = awemeDetail.optString("desc", "抖音无水印高清视频");
+                                String cover = "";
                                 org.json.JSONObject videoObj = awemeDetail.optJSONObject("video");
                                 if (videoObj != null) {
-                                    String cover = "";
                                     org.json.JSONObject coverObj = videoObj.optJSONObject("cover");
                                     if (coverObj != null) {
                                         org.json.JSONArray covers = coverObj.optJSONArray("url_list");
                                         if (covers != null && covers.length() > 0) cover = covers.getString(0);
                                     }
+                                }
 
+                                // If User requested Audio Mode (MP3 extract)
+                                if (reqMode.equals("audio")) {
+                                    org.json.JSONObject musicObj = awemeDetail.optJSONObject("music");
+                                    if (musicObj != null) {
+                                        org.json.JSONObject playObj = musicObj.optJSONObject("play_url");
+                                        if (playObj != null) {
+                                            org.json.JSONArray playList = playObj.optJSONArray("url_list");
+                                            if (playList != null && playList.length() > 0) {
+                                                String musicUrl = playList.getString(0);
+                                                String musicTitle = musicObj.optString("title", videoTitle);
+                                                String musicCover = cover;
+                                                org.json.JSONObject coverLarge = musicObj.optJSONObject("cover_large");
+                                                if (coverLarge != null) {
+                                                    org.json.JSONArray cList = coverLarge.optJSONArray("url_list");
+                                                    if (cList != null && cList.length() > 0) musicCover = cList.getString(0);
+                                                }
+
+                                                final org.json.JSONObject result = new org.json.JSONObject();
+                                                result.put("platform", "douyin");
+                                                result.put("title", musicTitle);
+                                                result.put("cover", musicCover);
+                                                result.put("downloadUrl", musicUrl);
+                                                result.put("category", "audio");
+
+                                                runOnUiThread(new Runnable() {
+                                                    @Override
+                                                    public void run() {
+                                                        if (webView != null) {
+                                                            String escaped = result.toString().replace("\\", "\\\\").replace("'", "\\'");
+                                                            webView.evaluateJavascript("window.onNativeMediaResolved && window.onNativeMediaResolved('" + callbackId + "', '" + escaped + "');", null);
+                                                        }
+                                                    }
+                                                });
+                                                return;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if (videoObj != null) {
                                     String playUrl = "";
                                     org.json.JSONObject h264Obj = videoObj.optJSONObject("play_addr_h264");
                                     if (h264Obj != null) {
@@ -300,7 +347,7 @@ public class MainActivity extends AppCompatActivity {
                                     if (!playUrl.isEmpty()) {
                                         final org.json.JSONObject result = new org.json.JSONObject();
                                         result.put("platform", "douyin");
-                                        result.put("title", title);
+                                        result.put("title", videoTitle);
                                         result.put("cover", cover);
                                         result.put("downloadUrl", playUrl);
                                         result.put("category", "video");
