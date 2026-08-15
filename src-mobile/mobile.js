@@ -324,6 +324,8 @@
 
     if (task.category === 'audio') {
       titleEl.textContent = '🎵 音频无损播放';
+      videoBox.style.display = 'none';
+      audioBox.style.display = 'flex';
       videoBox.classList.add('hidden');
       audioBox.classList.remove('hidden');
       document.getElementById('audioMetaTitle').textContent = task.title || '无损音乐原声';
@@ -335,6 +337,8 @@
       audio.onplay = () => disc.classList.add('playing');
     } else {
       titleEl.textContent = '🎬 视频极清播放';
+      audioBox.style.display = 'none';
+      videoBox.style.display = 'flex';
       audioBox.classList.add('hidden');
       videoBox.classList.remove('hidden');
       if (saveActionText) saveActionText.textContent = '保存至手机相册';

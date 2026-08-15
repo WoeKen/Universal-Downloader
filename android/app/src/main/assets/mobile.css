@@ -702,6 +702,11 @@ body.light-theme .brand-title {
   cursor: pointer;
 }
 
+#audioContainer.hidden,
+#videoContainer.hidden,
+.video-theatre-box.hidden,
+.audio-theatre-box.hidden,
+.mobile-modal.hidden,
 .hidden {
   display: none !important;
 }
