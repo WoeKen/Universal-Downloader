@@ -131,35 +131,44 @@
       </button>
     </nav>
 
-    <!-- Native In-App Video & Audio Player Modal -->
+    <!-- Smart Adaptive In-App Video & Audio Player Modal -->
     <div id="mediaModal" class="mobile-modal hidden">
       <div class="modal-backdrop"></div>
-      <div class="modal-sheet glass-card">
+      <div class="modal-sheet glass-card media-player-sheet">
         <div class="sheet-header">
           <div class="sheet-drag-handle"></div>
-          <h3 id="mediaTitle" class="sheet-title">媒体播放</h3>
+          <h3 id="mediaTitle" class="sheet-title">🎬 视频播放</h3>
           <button id="closeMediaModalBtn" class="close-btn">&times;</button>
         </div>
         <div class="sheet-body">
-          <div id="videoContainer" class="video-box">
-            <video id="nativeVideoPlayer" controls playsinline></video>
+          <!-- Video Section -->
+          <div id="videoContainer" class="video-theatre-box">
+            <video id="nativeVideoPlayer" controls playsinline preload="auto"></video>
           </div>
-          <div id="audioContainer" class="audio-box hidden">
+
+          <!-- Audio Section -->
+          <div id="audioContainer" class="audio-theatre-box hidden">
             <div class="vinyl-disc-wrap">
               <div id="mobileVinylDisc" class="vinyl-disc">
-                <div class="vinyl-center"></div>
+                <div id="vinylCoverImg" class="vinyl-center"></div>
               </div>
             </div>
-            <audio id="nativeAudioPlayer" controls></audio>
+            <div class="audio-meta-wrap">
+              <h4 id="audioMetaTitle" class="audio-meta-title">无损音乐原声</h4>
+              <p id="audioMetaAuthor" class="audio-meta-author">Universal Audio Engine</p>
+            </div>
+            <audio id="nativeAudioPlayer" controls class="custom-audio-bar"></audio>
           </div>
+
+          <!-- Smart Quick Actions -->
           <div class="media-actions-row">
             <button id="saveToGalleryBtn" class="sheet-action-btn primary">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-              <span>保存至系统相册 / 音乐库</span>
+              <span id="saveActionText">保存至系统相册</span>
             </button>
             <button id="shareFileBtn" class="sheet-action-btn secondary">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
-              <span>分享给好友</span>
+              <span>系统分享</span>
             </button>
           </div>
         </div>

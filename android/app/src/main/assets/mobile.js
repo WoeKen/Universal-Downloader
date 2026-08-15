@@ -265,7 +265,7 @@
     }
   }
 
-  // 5. In-App Media Player Modal
+  // 5. In-App Media Player Modal (Smart Adaptive Segregation)
   function openMediaModal(task) {
     activePlayingTask = task;
     const modal = document.getElementById('mediaModal');
@@ -275,21 +275,27 @@
     const video = document.getElementById('nativeVideoPlayer');
     const audio = document.getElementById('nativeAudioPlayer');
     const disc = document.getElementById('mobileVinylDisc');
+    const saveActionText = document.getElementById('saveActionText');
 
-    titleEl.textContent = task.title;
     modal.classList.remove('hidden');
 
     if (task.category === 'audio') {
+      titleEl.textContent = '🎵 音频无损播放';
       videoBox.classList.add('hidden');
       audioBox.classList.remove('hidden');
+      document.getElementById('audioMetaTitle').textContent = task.title || '无损音乐原声';
+      if (saveActionText) saveActionText.textContent = '保存至系统音乐库';
       audio.src = task.url;
       audio.play().catch(() => {});
       disc.classList.add('playing');
       audio.onpause = () => disc.classList.remove('playing');
       audio.onplay = () => disc.classList.add('playing');
     } else {
+      titleEl.textContent = '🎬 视频极清播放';
       audioBox.classList.add('hidden');
       videoBox.classList.remove('hidden');
+      if (saveActionText) saveActionText.textContent = '保存至手机相册';
+      if (task.cover) video.poster = task.cover;
       video.src = task.url;
       video.play().catch(() => {});
     }
@@ -299,8 +305,14 @@
     const modal = document.getElementById('mediaModal');
     const video = document.getElementById('nativeVideoPlayer');
     const audio = document.getElementById('nativeAudioPlayer');
-    if (video) video.pause();
-    if (audio) audio.pause();
+    if (video) {
+      video.pause();
+      video.src = '';
+    }
+    if (audio) {
+      audio.pause();
+      audio.src = '';
+    }
     modal.classList.add('hidden');
   }
 
@@ -512,6 +524,19 @@
     const APP_VERSION = 'v1.1.9';
     let latestApkUrl = 'https://github.com/WoeKen/Universal-Downloader/releases/latest';
 
+    function isRemoteVersionNewer(remote, current) {
+      const clean = v => (v || '').replace(/^v/i, '').trim().split('.').map(n => parseInt(n, 10) || 0);
+      const r = clean(remote);
+      const c = clean(current);
+      for (let i = 0; i < Math.max(r.length, c.length); i++) {
+        const rVal = r[i] || 0;
+        const cVal = c[i] || 0;
+        if (rVal > cVal) return true;
+        if (rVal < cVal) return false;
+      }
+      return false;
+    }
+
     async function checkForUpdates(manual = false) {
       if (manual) {
         triggerHaptic();
@@ -533,15 +558,18 @@
           latestApkUrl = data.html_url || 'https://github.com/WoeKen/Universal-Downloader/releases/latest';
         }
 
-        const isNewer = remoteVer !== APP_VERSION;
-        if (isNewer || manual) {
+        const isNewer = isRemoteVersionNewer(remoteVer, APP_VERSION);
+        if (isNewer) {
           document.getElementById('currentVerText').textContent = APP_VERSION;
           document.getElementById('latestVerText').textContent = remoteVer;
           document.getElementById('updateChangelogContent').textContent = data.body || '新版本性能全面提升，去水印解析算法更强劲！';
           updateModal.classList.remove('hidden');
           triggerHaptic('success');
         } else {
-          if (manual) showToast(`✅ 当前已是最新版本 (${APP_VERSION})`);
+          if (manual) {
+            triggerHaptic('success');
+            showToast(`✅ 当前已是最新版本 (${APP_VERSION})`);
+          }
         }
       } catch (err) {
         if (manual) showToast('无法连接更新服务器，请检查网络');

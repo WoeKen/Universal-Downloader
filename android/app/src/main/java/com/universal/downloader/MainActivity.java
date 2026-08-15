@@ -150,14 +150,103 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @JavascriptInterface
-        public void downloadAndInstallApk(String apkUrl) {
-            try {
-                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(apkUrl));
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(intent);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+        public void resolveNativeMedia(final String rawUrl, final String callbackId) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        String targetUrl = rawUrl;
+                        java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(rawUrl).openConnection();
+                        conn.setInstanceFollowRedirects(false);
+                        conn.setRequestProperty("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X)");
+                        conn.connect();
+                        int code = conn.getResponseCode();
+                        if (code == 301 || code == 302 || code == 307) {
+                            String loc = conn.getHeaderField("Location");
+                            if (loc != null && !loc.isEmpty()) {
+                                targetUrl = loc;
+                            }
+                        }
+                        conn.disconnect();
+
+                        String videoId = "";
+                        java.util.regex.Matcher m = java.util.regex.Pattern.compile("/video/(\\d+)").matcher(targetUrl);
+                        if (m.find()) {
+                            videoId = m.group(1);
+                        }
+
+                        if (!videoId.isEmpty()) {
+                            String apiUrl = "https://www.iesdouyin.com/web/api/v2/aweme/iteminfo/?item_ids=" + videoId;
+                            java.net.HttpURLConnection apiConn = (java.net.HttpURLConnection) new java.net.URL(apiUrl).openConnection();
+                            apiConn.setRequestProperty("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X)");
+                            java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(apiConn.getInputStream()));
+                            StringBuilder sb = new StringBuilder();
+                            String line;
+                            while ((line = reader.readLine()) != null) {
+                                sb.append(line);
+                            }
+                            reader.close();
+                            apiConn.disconnect();
+
+                            org.json.JSONObject json = new org.json.JSONObject(sb.toString());
+                            org.json.JSONArray items = json.optJSONArray("item_list");
+                            if (items != null && items.length() > 0) {
+                                org.json.JSONObject item = items.getJSONObject(0);
+                                String title = item.optString("desc", "抖音无水印高清视频");
+                                String cover = "";
+                                org.json.JSONObject videoObj = item.optJSONObject("video");
+                                if (videoObj != null) {
+                                    org.json.JSONObject coverObj = videoObj.optJSONObject("cover");
+                                    if (coverObj != null) {
+                                        org.json.JSONArray covers = coverObj.optJSONArray("url_list");
+                                        if (covers != null && covers.length() > 0) {
+                                            cover = covers.getString(0);
+                                        }
+                                    }
+                                    org.json.JSONObject playObj = videoObj.optJSONObject("play_addr");
+                                    String playUrl = "";
+                                    if (playObj != null) {
+                                        org.json.JSONArray plays = playObj.optJSONArray("url_list");
+                                        if (plays != null && plays.length() > 0) {
+                                            playUrl = plays.getString(0).replace("playwm", "play");
+                                        }
+                                    }
+
+                                    final org.json.JSONObject result = new org.json.JSONObject();
+                                    result.put("platform", "douyin");
+                                    result.put("title", title);
+                                    result.put("cover", cover);
+                                    result.put("downloadUrl", playUrl);
+                                    result.put("category", "video");
+
+                                    runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            if (webView != null) {
+                                                String escaped = result.toString().replace("\\", "\\\\").replace("'", "\\'");
+                                                webView.evaluateJavascript("window.onNativeMediaResolved && window.onNativeMediaResolved('" + callbackId + "', '" + escaped + "');", null);
+                                            }
+                                        }
+                                    });
+                                    return;
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
+                    // Fallback callback
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (webView != null) {
+                                webView.evaluateJavascript("window.onNativeMediaResolved && window.onNativeMediaResolved('" + callbackId + "', null);", null);
+                            }
+                        }
+                    });
+                }
+            }).start();
         }
     }
 }
