@@ -256,7 +256,7 @@
 
       // Native Bridge or Internal Downloader
       if (window.NativeAndroid?.startDownload) {
-        window.NativeAndroid.startDownload(JSON.stringify(newTask));
+        window.NativeAndroid.startDownload(newTask.id, newTask.url, newTask.title, newTask.category === 'video');
       } else {
         simulateDownload(newTask);
       }
@@ -264,6 +264,36 @@
       showToast('❌ 解析失败: ' + e.message);
     }
   }
+
+  // Native Download Listeners from Android Java
+  window.onNativeDownloadProgress = function (taskId, progress, downloaded, size, speed) {
+    const t = tasks.find(x => x.id === taskId);
+    if (t) {
+      t.status = 'downloading';
+      t.progress = progress;
+      t.downloaded = downloaded;
+      t.size = size;
+      t.speed = speed;
+      saveTasks();
+      renderTaskList();
+    }
+  };
+
+  window.onNativeDownloadCompleted = function (taskId, localFilePath) {
+    const t = tasks.find(x => x.id === taskId);
+    if (t) {
+      t.status = 'completed';
+      t.progress = 100;
+      t.downloaded = t.size || t.downloaded;
+      t.speed = 0;
+      t.localPath = localFilePath;
+      t.url = 'file://' + localFilePath;
+      saveTasks();
+      renderTaskList();
+      triggerHaptic('success');
+      showToast(`🎉 「${t.title.slice(0, 15)}...」已成功保存至手机相册！`);
+    }
+  };
 
   // 5. In-App Media Player Modal (Smart Adaptive Segregation)
   function openMediaModal(task) {

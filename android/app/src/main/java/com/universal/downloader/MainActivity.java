@@ -248,5 +248,92 @@ public class MainActivity extends AppCompatActivity {
                 }
             }).start();
         }
+
+        @JavascriptInterface
+        public void startDownload(final String taskId, final String downloadUrl, final String rawTitle, final boolean isVideo) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    java.io.InputStream in = null;
+                    java.io.FileOutputStream out = null;
+                    try {
+                        File downloadDir = new File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "UniversalDownloader");
+                        if (!downloadDir.exists()) {
+                            downloadDir.mkdirs();
+                        }
+
+                        String safeTitle = (rawTitle != null ? rawTitle : "download_" + System.currentTimeMillis()).replaceAll("[\\\\/:*?\"<>|]", "_").trim();
+                        if (safeTitle.length() > 60) safeTitle = safeTitle.substring(0, 60);
+                        String ext = isVideo ? ".mp4" : ".mp3";
+                        final File targetFile = new File(downloadDir, safeTitle + ext);
+
+                        java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(downloadUrl).openConnection();
+                        conn.setRequestProperty("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X)");
+                        conn.connect();
+
+                        final long totalSize = conn.getContentLengthLong() > 0 ? conn.getContentLengthLong() : 15 * 1024 * 1024;
+                        in = conn.getInputStream();
+                        out = new java.io.FileOutputStream(targetFile);
+
+                        byte[] buffer = new byte[64 * 1024];
+                        int bytesRead;
+                        long downloaded = 0;
+                        long lastTime = System.currentTimeMillis();
+                        long lastDownloaded = 0;
+
+                        while ((bytesRead = in.read(buffer)) != -1) {
+                            out.write(buffer, 0, bytesRead);
+                            downloaded += bytesRead;
+
+                            long now = System.currentTimeMillis();
+                            if (now - lastTime >= 250) {
+                                final long speed = (downloaded - lastDownloaded) * 1000 / (now - lastTime);
+                                final long curDownloaded = downloaded;
+                                final int progress = (int) (downloaded * 100 / Math.max(1, totalSize));
+                                lastTime = now;
+                                lastDownloaded = downloaded;
+
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        if (webView != null) {
+                                            webView.evaluateJavascript("window.onNativeDownloadProgress && window.onNativeDownloadProgress('" + taskId + "', " + progress + ", " + curDownloaded + ", " + totalSize + ", " + speed + ");", null);
+                                        }
+                                    }
+                                });
+                            }
+                        }
+
+                        out.flush();
+                        out.close();
+                        in.close();
+
+                        // 100% Real Physical File Saved: Register into Android System MediaStore & Gallery
+                        final String absolutePath = targetFile.getAbsolutePath();
+                        String mimeType = isVideo ? "video/mp4" : "audio/mpeg";
+                        MediaScannerConnection.scanFile(MainActivity.this,
+                                new String[]{absolutePath},
+                                new String[]{mimeType},
+                                null);
+
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                if (webView != null) {
+                                    webView.evaluateJavascript("window.onNativeDownloadCompleted && window.onNativeDownloadCompleted('" + taskId + "', '" + absolutePath.replace("\\", "\\\\").replace("'", "\\'") + "');", null);
+                                }
+                            }
+                        });
+
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        try {
+                            if (out != null) out.close();
+                            if (in != null) in.close();
+                        } catch (Exception ex) {}
+                    }
+                }
+            }).start();
+        }
     }
 }
