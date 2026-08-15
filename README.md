@@ -4,15 +4,16 @@
 ### *Next-Gen Liquid Glass Multi-Protocol Media & Stream Workstation*
 
 [![Release Version](https://img.shields.io/badge/release-v1.1.9-00f2fe.svg?style=for-the-badge&logo=electron)](https://github.com/WoeKen/Universal-Downloader/releases)
-[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-34c759.svg?style=for-the-badge&logo=windows)](https://github.com/WoeKen/Universal-Downloader)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Android%20%7C%20Web-34c759.svg?style=for-the-badge&logo=windows)](https://github.com/WoeKen/Universal-Downloader)
+[![Android](https://img.shields.io/badge/Android-Native%20APK-3DDC84.svg?style=for-the-badge&logo=android&logoColor=white)](https://github.com/WoeKen/Universal-Downloader/releases)
 [![License](https://img.shields.io/badge/License-MIT-ff2d55.svg?style=for-the-badge)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/WoeKen/Universal-Downloader?style=for-the-badge&logo=github&color=gold)](https://github.com/WoeKen/Universal-Downloader/stargazers)
 
 <p align="center">
-  <b>🌐 零拷贝高并发分片 · 🧲 BitTorrent/磁力雷达 · 🎬 4K/8K音视频嗅探 · 🚫 100%全网社交媒体纯净无水印 · 🔮 桌面悬浮测速球 · 📱 局域网无线扫码投递</b>
+  <b>🌐 零拷贝高并发分片 · 🧲 BitTorrent/磁力雷达 · 🎬 4K/8K无水印解析 · 📱 Android 原生系统级分享拦截 · 🔮 桌面悬浮测速球 · 📲 局域网跨端投递</b>
 </p>
 
-[简体中文](./README.md) · [📥 下载最新体验版](https://github.com/WoeKen/Universal-Downloader/releases) · [💬 商务合作与定制](#-商务定制与作者直联)
+[简体中文](./README.md) · [📥 下载 Windows / Android 最新版](https://github.com/WoeKen/Universal-Downloader/releases) · [💬 商务合作与定制](#-商务定制与作者直联)
 
 ---
 
@@ -66,6 +67,7 @@ graph LR
 
 | 发行版本 | 格式 | 说明 | 下载直达 |
 | :--- | :--- | :--- | :--- |
+| **Android 原生独立版** | `.apk` | 支持系统「分享到下载器」截获、锁屏后台保活、相册直出 | [📥 点击下载 Android APK](https://github.com/WoeKen/Universal-Downloader/releases) |
 | **Windows 独立安装版** | `.exe (NSIS)` | 一键安装，自动关联磁力与种子协议 | [📥 点击下载 Setup.exe](https://github.com/WoeKen/Universal-Downloader/releases) |
 | **Windows 绿色免安装版** | `.zip / .exe` | 解压即用，纯净便携 | [📥 点击下载 Portable.zip](https://github.com/WoeKen/Universal-Downloader/releases) |
 

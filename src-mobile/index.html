@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Universal Downloader Mobile - 全能下载器</title>
+  <link rel="stylesheet" href="mobile.css">
+</head>
+<body class="dark-theme">
+  <div id="app" class="mobile-container">
+
+    <!-- Top Status & Header -->
+    <header class="mobile-header glass-header">
+      <div class="header-left">
+        <div class="app-brand">
+          <div class="brand-glow-icon">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v14M19 9l-7 7-7-7M2 19h20"></path></svg>
+          </div>
+          <div class="brand-titles">
+            <span class="brand-title">Universal DL</span>
+            <span class="brand-subtitle">Liquid Mobile Core</span>
+          </div>
+        </div>
+      </div>
+      <div class="header-right">
+        <button id="themeToggleBtn" class="glass-icon-btn" title="切换暗黑/明亮模式">
+          <svg id="themeIcon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+        </button>
+        <button id="contactModalBtn" class="glass-icon-btn highlight-btn" title="联系作者 / 商务合作">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Scrollable Content Area -->
+    <main class="mobile-main">
+
+      <!-- Real-time Speed & Overview Banner -->
+      <section class="mobile-speed-card glass-card">
+        <div class="speed-meta-header">
+          <div class="speed-badge-wrap">
+            <span class="pulse-dot"></span>
+            <span class="speed-label">实时下载总速率</span>
+          </div>
+          <div class="metric-counters">
+            <span class="count-tag"><i class="tag-dot active"></i> 进行中: <b id="mobileActiveCount">0</b></span>
+            <span class="count-tag"><i class="tag-dot done"></i> 已完成: <b id="mobileDoneCount">0</b></span>
+          </div>
+        </div>
+        <div class="speed-display-row">
+          <strong id="mobileLiveSpeed" class="live-speed-num">0 B/s</strong>
+          <canvas id="mobileSpeedCanvas" width="150" height="38" class="mobile-speed-canvas"></canvas>
+        </div>
+      </section>
+
+      <!-- Quick Analysis & Download Card -->
+      <section class="mobile-parse-card glass-card">
+        <div class="input-wrap">
+          <textarea id="mobileUrlInput" class="mobile-textarea" placeholder="粘贴抖音 / TikTok / B站 / YouTube / 磁力 / 直链..."></textarea>
+          <button id="pasteBtn" class="glass-paste-btn" title="粘贴剪贴板链接">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+            <span>粘贴</span>
+          </button>
+        </div>
+
+        <!-- Platform Chips -->
+        <div class="platform-chips-scroll">
+          <span class="plat-chip active" data-type="all">🔥 全网通杀</span>
+          <span class="plat-chip" data-type="douyin">抖音无水印</span>
+          <span class="plat-chip" data-type="tiktok">TikTok HD</span>
+          <span class="plat-chip" data-type="bilibili">B站 4K</span>
+          <span class="plat-chip" data-type="youtube">YouTube</span>
+          <span class="plat-chip" data-type="xiaohongshu">小红书原图</span>
+          <span class="plat-chip" data-type="kuaishou">快手</span>
+          <span class="plat-chip" data-type="direct">高速直链</span>
+        </div>
+
+        <div class="action-btn-row">
+          <button id="startParseBtn" class="mobile-primary-btn">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            <span>智能透析与极速下载</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Filter Tabs -->
+      <div class="filter-tabs-row">
+        <button class="filter-tab active" data-filter="all">全部 (<span id="tabCountAll">0</span>)</button>
+        <button class="filter-tab" data-filter="downloading">下载中 (<span id="tabCountRun">0</span>)</button>
+        <button class="filter-tab" data-filter="completed">已落盘 (<span id="tabCountDone">0</span>)</button>
+        <button class="filter-tab" data-filter="video">视频</button>
+        <button class="filter-tab" data-filter="audio">音乐</button>
+      </div>
+
+      <!-- Task List Container -->
+      <section id="mobileTaskList" class="mobile-task-list">
+        <!-- Dynamic Task Cards -->
+      </section>
+
+      <!-- Empty State View -->
+      <div id="mobileEmptyView" class="mobile-empty-view">
+        <div class="empty-icon-circle">
+          <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        </div>
+        <p class="empty-title">暂无下载任务</p>
+        <p class="empty-sub">在上方粘贴链接，或在其他 App 中点击「分享 ➔ Universal Downloader」</p>
+      </div>
+
+    </main>
+
+    <!-- Bottom Navigation Dock -->
+    <nav class="mobile-bottom-dock glass-dock">
+      <button class="dock-item active" data-nav="tasks">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+        <span>任务</span>
+      </button>
+      <button class="dock-item" data-nav="cast">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+        <span>无线投递</span>
+      </button>
+      <button class="dock-item" data-nav="contact">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        <span>联系作者</span>
+      </button>
+      <button class="dock-item" data-nav="settings">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        <span>设置</span>
+      </button>
+    </nav>
+
+    <!-- Native In-App Video & Audio Player Modal -->
+    <div id="mediaModal" class="mobile-modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-sheet glass-card">
+        <div class="sheet-header">
+          <div class="sheet-drag-handle"></div>
+          <h3 id="mediaTitle" class="sheet-title">媒体播放</h3>
+          <button id="closeMediaModalBtn" class="close-btn">&times;</button>
+        </div>
+        <div class="sheet-body">
+          <div id="videoContainer" class="video-box">
+            <video id="nativeVideoPlayer" controls playsinline></video>
+          </div>
+          <div id="audioContainer" class="audio-box hidden">
+            <div class="vinyl-disc-wrap">
+              <div id="mobileVinylDisc" class="vinyl-disc">
+                <div class="vinyl-center"></div>
+              </div>
+            </div>
+            <audio id="nativeAudioPlayer" controls></audio>
+          </div>
+          <div class="media-actions-row">
+            <button id="saveToGalleryBtn" class="sheet-action-btn primary">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              <span>保存至系统相册 / 音乐库</span>
+            </button>
+            <button id="shareFileBtn" class="sheet-action-btn secondary">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+              <span>分享给好友</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contact & Business Modal -->
+    <div id="contactModal" class="mobile-modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-sheet glass-card">
+        <div class="sheet-header">
+          <div class="sheet-drag-handle"></div>
+          <h3 class="sheet-title">💬 联系作者 / 商务合作</h3>
+          <button id="closeContactBtn" class="close-btn">&times;</button>
+        </div>
+        <div class="sheet-body">
+          <div class="contact-channels-list">
+            <!-- WhatsApp -->
+            <div class="contact-card whatsapp">
+              <div class="channel-info">
+                <span class="channel-icon">🟢</span>
+                <div>
+                  <strong>WhatsApp</strong>
+                  <p>+1 (249) 897-8869</p>
+                </div>
+              </div>
+              <div class="channel-actions">
+                <button class="mini-btn copy-btn" data-copy="+12498978869">复制</button>
+                <button class="mini-btn open-btn" data-url="https://wa.me/12498978869">直聊</button>
+              </div>
+            </div>
+
+            <!-- Telegram -->
+            <div class="contact-card telegram">
+              <div class="channel-info">
+                <span class="channel-icon">🔵</span>
+                <div>
+                  <strong>Telegram</strong>
+                  <p>@woeken318</p>
+                </div>
+              </div>
+              <div class="channel-actions">
+                <button class="mini-btn copy-btn" data-copy="@woeken318">复制</button>
+                <button class="mini-btn open-btn" data-url="https://t.me/woeken318">直聊</button>
+              </div>
+            </div>
+
+            <!-- Gmail -->
+            <div class="contact-card gmail">
+              <div class="channel-info">
+                <span class="channel-icon">🔴</span>
+                <div>
+                  <strong>Gmail</strong>
+                  <p>songfx.shop318318@gmail.com</p>
+                </div>
+              </div>
+              <div class="channel-actions">
+                <button class="mini-btn copy-btn" data-copy="songfx.shop318318@gmail.com">复制</button>
+                <button class="mini-btn open-btn" data-url="mailto:songfx.shop318318@gmail.com">发信</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dynamic Standard QR Switcher -->
+          <div class="qr-box">
+            <div class="qr-tab-switcher">
+              <button class="qr-tab active" data-target="whatsapp">WhatsApp</button>
+              <button class="qr-tab" data-target="telegram">Telegram</button>
+              <button class="qr-tab" data-target="gmail">Gmail</button>
+            </div>
+            <div class="canvas-wrap">
+              <canvas id="mobileContactQrCanvas" width="160" height="160"></canvas>
+            </div>
+            <p class="qr-hint">手机相机 / 微信扫码即刻直连</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="mobileToast" class="mobile-toast hidden"></div>
+
+  </div>
+
+  <script src="qrcode.min.js"></script>
+  <script src="parsers.js"></script>
+  <script src="mobile.js"></script>
+</body>
+</html>
