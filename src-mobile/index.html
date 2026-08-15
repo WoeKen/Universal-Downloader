@@ -273,6 +273,157 @@
       </div>
     </div>
 
+    <!-- Production Grade Settings & Preferences Modal -->
+    <div id="settingsModal" class="mobile-modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-sheet glass-card settings-sheet">
+        <div class="sheet-header">
+          <div class="sheet-drag-handle"></div>
+          <h3 class="sheet-title">⚙️ 设置与偏好中心</h3>
+          <button id="closeSettingsBtn" class="close-btn">&times;</button>
+        </div>
+        <div class="sheet-body settings-body-scroll">
+          
+          <!-- Section 1: Storage & Directory -->
+          <div class="settings-group">
+            <h4 class="settings-group-title">📂 存储与下载管理</h4>
+            
+            <div class="setting-item-card">
+              <div class="setting-item-top">
+                <strong>默认存储路径</strong>
+                <span class="setting-badge-ok">✅ 已就绪</span>
+              </div>
+              <p class="setting-path-display">/sdcard/Download/UniversalDownloader</p>
+              <span class="setting-desc-text">所有解析提取的无水印视频与音频安全存放于此，系统重装不丢失。</span>
+            </div>
+
+            <div class="setting-item-row">
+              <div class="setting-label-col">
+                <strong>自动入库系统相册 (MediaStore)</strong>
+                <span class="setting-desc-text">下载完成后自动刷新图库，在手机系统相册与播放器直接可见</span>
+              </div>
+              <label class="switch-toggle">
+                <input type="checkbox" id="settingAutoGallery" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div class="setting-item-row">
+              <div class="setting-label-col">
+                <strong>多线程零拷贝并发分片</strong>
+                <span class="setting-desc-text">并发切片连接数，突破运营商限速瓶颈</span>
+              </div>
+              <select id="settingThreads" class="glass-select">
+                <option value="4">4 线程 (省电)</option>
+                <option value="8" selected>8 线程 (推荐)</option>
+                <option value="16">16 线程 (极速)</option>
+                <option value="32">32 线程 (狂暴极限)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Section 2: Smart Extraction & Quality Preferences -->
+          <div class="settings-group">
+            <h4 class="settings-group-title">⚡ 智能解析与画质偏好</h4>
+            
+            <div class="setting-item-row">
+              <div class="setting-label-col">
+                <strong>剪贴板链接自动嗅探</strong>
+                <span class="setting-desc-text">从抖音/TikTok/B站复制链接返回 App 时自动弹出解析</span>
+              </div>
+              <label class="switch-toggle">
+                <input type="checkbox" id="settingAutoClipboard" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div class="setting-item-row">
+              <div class="setting-label-col">
+                <strong>默认解析画质偏好</strong>
+                <span class="setting-desc-text">优先提取视频的最高清晰度源流</span>
+              </div>
+              <select id="settingQuality" class="glass-select">
+                <option value="best" selected>最高画质 (4K/8K 原画)</option>
+                <option value="1080p">1080P 全高清</option>
+                <option value="720p">720P 高清</option>
+                <option value="audio_only">仅提取无损音频 (MP3)</option>
+              </select>
+            </div>
+
+            <div class="setting-item-row">
+              <div class="setting-label-col">
+                <strong>EBU R128 音频母带级调平</strong>
+                <span class="setting-desc-text">广播级响度平衡算法，消除视频音量忽大忽小爆音</span>
+              </div>
+              <label class="switch-toggle">
+                <input type="checkbox" id="settingLoudnorm" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Section 3: Cache Maintenance -->
+          <div class="settings-group">
+            <h4 class="settings-group-title">🧹 缓存维护与存储释放</h4>
+            
+            <div class="setting-item-row">
+              <div class="setting-label-col">
+                <strong>应用运行与解析缓存</strong>
+                <span class="setting-desc-text" id="settingCacheSizeText">当前占用: 18.4 MB (临时封面与解析元数据)</span>
+              </div>
+              <button id="cleanCacheBtn" class="setting-action-btn">一键清理</button>
+            </div>
+
+            <div class="setting-item-row">
+              <div class="setting-label-col">
+                <strong>下载任务历史记录</strong>
+                <span class="setting-desc-text">清空已完成的历史任务列表（不删除本地下载的文件）</span>
+              </div>
+              <button id="clearCompletedTasksBtn" class="setting-action-btn danger">清空记录</button>
+            </div>
+          </div>
+
+          <!-- Section 4: Store Compliance & Privacy Policy -->
+          <div class="settings-group">
+            <h4 class="settings-group-title">🛡️ 商城上架资质与隐私合规</h4>
+            
+            <div class="setting-item-card">
+              <div class="setting-item-top">
+                <strong>隐私保护承诺 (Privacy Policy)</strong>
+                <span class="setting-badge-ok">GDPR & Google Play 合规</span>
+              </div>
+              <span class="setting-desc-text">
+                本应用采用 100% 本地运算逆向透析架构，不收集用户个人隐私，不上传剪贴板历史，零广告植入，零第三方追踪 SDK。
+              </span>
+            </div>
+
+            <div class="setting-item-card">
+              <div class="setting-item-top">
+                <strong>开源许可证与技术致谢</strong>
+                <span class="setting-badge-muted">MIT License</span>
+              </div>
+              <span class="setting-desc-text">
+                基于 MIT 协议完全开源。感谢 Chromium Blink Engine、yt-dlp、FFmpeg 以及 Google AndroidX 社区的卓越开源生态。
+              </span>
+            </div>
+          </div>
+
+          <!-- Section 5: Version & Updates -->
+          <div class="settings-group">
+            <h4 class="settings-group-title">📱 软件版本与技术支持</h4>
+            <div class="setting-item-row">
+              <div class="setting-label-col">
+                <strong>Universal Downloader Mobile</strong>
+                <span class="setting-desc-text">v1.1.9 (Production Release · ARM64 / Universal)</span>
+              </div>
+              <button id="settingsCheckUpdateBtn" class="setting-action-btn primary">检查更新</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
     <!-- Toast Notification -->
     <div id="mobileToast" class="mobile-toast hidden"></div>
 
