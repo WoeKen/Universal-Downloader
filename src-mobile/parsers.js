@@ -40,8 +40,12 @@ const MobileParsers = {
     switch (platform) {
       case 'douyin':
         return await this.parseDouyin(rawUrl);
+      case 'instagram':
+        return await this.parseInstagram(rawUrl);
       case 'tiktok':
         return await this.parseTikTok(rawUrl);
+      case 'twitter':
+        return await this.parseTwitter(rawUrl);
       case 'bilibili':
         return await this.parseBilibili(rawUrl);
       case 'xiaohongshu':
@@ -49,8 +53,7 @@ const MobileParsers = {
       case 'kuaishou':
         return await this.parseKuaishou(rawUrl);
       case 'youtube':
-      case 'twitter':
-      case 'instagram':
+        return await this.parseYouTube(rawUrl);
       default:
         return await this.parseGeneric(rawUrl);
     }
@@ -146,21 +149,108 @@ const MobileParsers = {
     };
   },
 
-  // 2. TikTok 纯净无水印解析
-  async parseTikTok(url) {
-    try {
-      const match = url.match(/video\/(\d+)/);
-      const title = 'TikTok No-Watermark HD Video';
-      return {
-        platform: 'tiktok',
-        title: title,
-        downloadUrl: url,
-        category: 'video',
-        extension: 'mp4'
-      };
-    } catch (e) {
-      return this.parseGeneric(url);
+  // 2. Instagram 极清视频与Reels解析
+  async parseInstagram(url) {
+    if (window.NativeAndroid?.resolveNativeMedia) {
+      try {
+        const nativeResult = await new Promise((resolve) => {
+          const callbackId = 'cb_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+          const timer = setTimeout(() => resolve(null), 8500);
+
+          if (!window._nativeMediaCallbacks) window._nativeMediaCallbacks = {};
+          window._nativeMediaCallbacks[callbackId] = (dataStr) => {
+            clearTimeout(timer);
+            try {
+              resolve(JSON.parse(dataStr));
+            } catch (e) {
+              resolve(null);
+            }
+          };
+
+          window.NativeAndroid.resolveNativeMedia(url, callbackId);
+        });
+
+        if (nativeResult && nativeResult.downloadUrl) {
+          return {
+            platform: 'instagram',
+            title: nativeResult.title || 'Instagram 极清视频',
+            cover: nativeResult.cover || this.createSvgCover('Instagram HD'),
+            downloadUrl: nativeResult.downloadUrl,
+            category: 'video',
+            extension: 'mp4'
+          };
+        }
+      } catch (e) {}
     }
+
+    return {
+      platform: 'instagram',
+      title: 'Instagram 极清视频',
+      cover: this.createSvgCover('Instagram HD'),
+      downloadUrl: url,
+      category: 'video',
+      extension: 'mp4'
+    };
+  },
+
+  // 3. Twitter / X 极清视频解析
+  async parseTwitter(url) {
+    if (window.NativeAndroid?.resolveNativeMedia) {
+      try {
+        const nativeResult = await new Promise((resolve) => {
+          const callbackId = 'cb_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+          const timer = setTimeout(() => resolve(null), 8500);
+
+          if (!window._nativeMediaCallbacks) window._nativeMediaCallbacks = {};
+          window._nativeMediaCallbacks[callbackId] = (dataStr) => {
+            clearTimeout(timer);
+            try {
+              resolve(JSON.parse(dataStr));
+            } catch (e) {
+              resolve(null);
+            }
+          };
+
+          window.NativeAndroid.resolveNativeMedia(url, callbackId);
+        });
+
+        if (nativeResult && nativeResult.downloadUrl) {
+          return {
+            platform: 'twitter',
+            title: nativeResult.title || 'X / Twitter 极清视频',
+            cover: nativeResult.cover || this.createSvgCover('X / Twitter HD'),
+            downloadUrl: nativeResult.downloadUrl,
+            category: 'video',
+            extension: 'mp4'
+          };
+        }
+      } catch (e) {}
+    }
+
+    return {
+      platform: 'twitter',
+      title: 'X / Twitter 极清视频',
+      cover: this.createSvgCover('X / Twitter HD'),
+      downloadUrl: url,
+      category: 'video',
+      extension: 'mp4'
+    };
+  },
+
+  // 4. YouTube 高清视频解析
+  async parseYouTube(url) {
+    const idMatch = url.match(/(?:youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*)/);
+    const videoId = (idMatch && idMatch[1].length === 11) ? idMatch[1] : '';
+    const cover = videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : this.createSvgCover('YouTube 4K');
+    
+    return {
+      platform: 'youtube',
+      title: 'YouTube 极清视频',
+      cover: cover,
+      downloadUrl: url,
+      category: 'video',
+      extension: 'mp4'
+    };
   },
 
   // 3. B站高清解析

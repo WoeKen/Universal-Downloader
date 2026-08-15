@@ -268,8 +268,9 @@
       showToast('🚀 已进入高速下载队列！');
 
       // Native Bridge or Internal Downloader
+      const isVideo = newTask.category === 'video' || ['instagram', 'douyin', 'tiktok', 'bilibili', 'youtube', 'twitter', 'kuaishou', 'xiaohongshu'].includes(newTask.platform) || !['audio', 'mp3', 'music'].includes(newTask.category);
       if (window.NativeAndroid?.startDownload) {
-        window.NativeAndroid.startDownload(newTask.id, newTask.url, newTask.title, newTask.category === 'video');
+        window.NativeAndroid.startDownload(newTask.id, newTask.url, newTask.title, isVideo);
       } else {
         simulateDownload(newTask);
       }

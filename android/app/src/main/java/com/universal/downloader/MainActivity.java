@@ -182,7 +182,58 @@ public class MainActivity extends AppCompatActivity {
                             break;
                         }
 
-                        // 3. Extract Video ID from redirected Long URL
+                        // 3. Instagram Resolution
+                        if (currentUrl.contains("instagram.com") || currentUrl.contains("instagr.am")) {
+                            try {
+                                java.net.HttpURLConnection igConn = (java.net.HttpURLConnection) new java.net.URL(currentUrl).openConnection();
+                                igConn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
+                                igConn.setRequestProperty("Accept-Language", "en-US,en;q=0.9");
+                                igConn.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+                                java.io.BufferedReader igReader = new java.io.BufferedReader(new java.io.InputStreamReader(igConn.getInputStream()));
+                                StringBuilder igHtml = new StringBuilder();
+                                String line;
+                                while ((line = igReader.readLine()) != null) {
+                                    igHtml.append(line);
+                                }
+                                igReader.close();
+                                igConn.disconnect();
+                                String html = igHtml.toString();
+
+                                String igVideo = "";
+                                java.util.regex.Matcher vMat = java.util.regex.Pattern.compile("<meta\\s+(?:property|name)=[\"'](?:og:video|og:video:secure_url)[\"']\\s+content=[\"']([^\"']+)[\"']").matcher(html);
+                                if (vMat.find()) igVideo = vMat.group(1).replace("&amp;", "&");
+
+                                String igCover = "";
+                                java.util.regex.Matcher cMat = java.util.regex.Pattern.compile("<meta\\s+(?:property|name)=[\"']og:image[\"']\\s+content=[\"']([^\"']+)[\"']").matcher(html);
+                                if (cMat.find()) igCover = cMat.group(1).replace("&amp;", "&");
+
+                                String igTitle = "Instagram 极清视频";
+                                java.util.regex.Matcher tMat = java.util.regex.Pattern.compile("<meta\\s+(?:property|name)=[\"']og:title[\"']\\s+content=[\"']([^\"']+)[\"']").matcher(html);
+                                if (tMat.find()) igTitle = tMat.group(1).replace("&amp;", "&");
+
+                                if (!igVideo.isEmpty()) {
+                                    final org.json.JSONObject result = new org.json.JSONObject();
+                                    result.put("platform", "instagram");
+                                    result.put("title", igTitle);
+                                    result.put("cover", igCover);
+                                    result.put("downloadUrl", igVideo);
+                                    result.put("category", "video");
+
+                                    runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            if (webView != null) {
+                                                String escaped = result.toString().replace("\\", "\\\\").replace("'", "\\'");
+                                                webView.evaluateJavascript("window.onNativeMediaResolved && window.onNativeMediaResolved('" + callbackId + "', '" + escaped + "');", null);
+                                            }
+                                        }
+                                    });
+                                    return;
+                                }
+                            } catch (Exception ignored) {}
+                        }
+
+                        // 4. Douyin Resolution (Aweme Detail API with Guest Cookies)
                         String videoId = "";
                         java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?:video/|modal_id=|item_ids=)(\\d+)").matcher(currentUrl);
                         if (m.find()) {
@@ -410,32 +461,22 @@ public class MainActivity extends AppCompatActivity {
                             downloadDir.mkdirs();
                         }
 
+                        // Dynamically check real MIME Content-Type
+                        String contentType = conn.getContentType();
+                        boolean realIsVideo = isVideo;
+                        if (contentType != null) {
+                            String lower = contentType.toLowerCase();
+                            if (lower.contains("video") || lower.contains("mp4") || lower.contains("octet-stream")) {
+                                realIsVideo = true;
+                            } else if (lower.contains("audio") || lower.contains("mpeg") || lower.contains("mp3")) {
+                                realIsVideo = false;
+                            }
+                        }
+
                         String safeTitle = (rawTitle != null ? rawTitle : "download_" + System.currentTimeMillis()).replaceAll("[\\\\/:*?\"<>|]", "_").trim();
                         if (safeTitle.length() > 60) safeTitle = safeTitle.substring(0, 60);
-                        String ext = isVideo ? ".mp4" : ".mp3";
+                        String ext = realIsVideo ? ".mp4" : ".mp3";
                         final File targetFile = new File(downloadDir, safeTitle + ext);
-
-                        // Follow all redirects with proper User-Agent & Referer
-                        String currentUrl = downloadUrl;
-                        java.net.HttpURLConnection conn = null;
-                        for (int i = 0; i < 5; i++) {
-                            conn = (java.net.HttpURLConnection) new java.net.URL(currentUrl).openConnection();
-                            conn.setInstanceFollowRedirects(true);
-                            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
-                            conn.setRequestProperty("Referer", "https://www.douyin.com/");
-                            conn.setRequestProperty("Accept", "*/*");
-                            conn.connect();
-                            int code = conn.getResponseCode();
-                            if (code == 301 || code == 302 || code == 303 || code == 307 || code == 308) {
-                                String loc = conn.getHeaderField("Location");
-                                conn.disconnect();
-                                if (loc != null && !loc.isEmpty()) {
-                                    currentUrl = loc;
-                                    continue;
-                                }
-                            }
-                            break;
-                        }
 
                         final long totalSize = conn.getContentLengthLong() > 0 ? conn.getContentLengthLong() : 11 * 1024 * 1024;
                         in = conn.getInputStream();
@@ -476,7 +517,7 @@ public class MainActivity extends AppCompatActivity {
 
                         // 100% Real Physical File Saved: Register into Android System MediaStore & Gallery
                         final String absolutePath = targetFile.getAbsolutePath();
-                        String mimeType = isVideo ? "video/mp4" : "audio/mpeg";
+                        String mimeType = realIsVideo ? "video/mp4" : "audio/mpeg";
                         MediaScannerConnection.scanFile(MainActivity.this,
                                 new String[]{absolutePath},
                                 new String[]{mimeType},
