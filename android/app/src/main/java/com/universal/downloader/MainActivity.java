@@ -3,12 +3,14 @@ package com.universal.downloader;
 import android.content.Intent;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.FileProvider;
 import java.io.File;
 
 public class MainActivity extends AppCompatActivity {
