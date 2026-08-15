@@ -6,7 +6,8 @@
   "scripts": {
     "setup": "powershell -ExecutionPolicy Bypass -File .\\setup.ps1",
     "start": "electron .",
-    "build": "electron-builder --win"
+    "build": "electron-builder --win",
+    "dist": "electron-builder --win"
   },
   "devDependencies": {
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
