@@ -463,8 +463,8 @@ public class MainActivity extends AppCompatActivity {
                                                     if (val != null && !val.equals("null") && !val.isEmpty()) {
                                                         try {
                                                             String rawStr = val;
-                                                            if (rawStr.startsWith("\"") && rawStr.endsWith("\"")) {
-                                                                rawStr = org.json.JSONObject.stringToValue(rawStr).toString();
+                                                            if (rawStr.startsWith("\"") && rawStr.endsWith("\"") && rawStr.length() >= 2) {
+                                                                rawStr = rawStr.substring(1, rawStr.length() - 1).replace("\\\"", "\"").replace("\\\\", "\\");
                                                             }
                                                             org.json.JSONObject domJson = new org.json.JSONObject(rawStr);
                                                             String dSrc = domJson.optString("src");
