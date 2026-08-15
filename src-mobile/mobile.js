@@ -429,6 +429,9 @@
 
     // Contact Modal
     const contactModal = document.getElementById('contactModal');
+    const mediaModal = document.getElementById('mediaModal');
+    const updateModal = document.getElementById('updateModal');
+
     document.getElementById('contactModalBtn')?.addEventListener('click', () => {
       contactModal.classList.remove('hidden');
       renderContactQr('whatsapp');
@@ -436,6 +439,123 @@
     });
     document.getElementById('closeContactBtn')?.addEventListener('click', () => {
       contactModal.classList.add('hidden');
+    });
+
+    // 7. Touch Swipe-Down Dismiss & Backdrop Dismiss Engine
+    function bindSheetDismissGestures(modalEl) {
+      if (!modalEl) return;
+      const sheet = modalEl.querySelector('.modal-sheet');
+      const backdrop = modalEl.querySelector('.modal-backdrop');
+      const handle = modalEl.querySelector('.sheet-drag-handle');
+
+      // Click Backdrop to dismiss
+      backdrop?.addEventListener('click', () => {
+        modalEl.classList.add('hidden');
+        triggerHaptic();
+      });
+
+      // Click Handle to dismiss
+      handle?.addEventListener('click', () => {
+        modalEl.classList.add('hidden');
+        triggerHaptic();
+      });
+
+      // Touch Drag Downwards to dismiss
+      if (sheet) {
+        let startY = 0;
+        let currentY = 0;
+        let isDragging = false;
+
+        sheet.addEventListener('touchstart', e => {
+          if (sheet.scrollTop <= 0) {
+            startY = e.touches[0].clientY;
+            isDragging = true;
+            sheet.style.transition = 'none';
+          }
+        }, { passive: true });
+
+        sheet.addEventListener('touchmove', e => {
+          if (!isDragging) return;
+          currentY = e.touches[0].clientY;
+          const deltaY = currentY - startY;
+          if (deltaY > 0) {
+            sheet.style.transform = `translateY(${deltaY * 0.75}px)`;
+          }
+        }, { passive: true });
+
+        sheet.addEventListener('touchend', () => {
+          if (!isDragging) return;
+          isDragging = false;
+          sheet.style.transition = 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)';
+          const deltaY = currentY - startY;
+          if (deltaY > 70) {
+            sheet.style.transform = 'translateY(100%)';
+            setTimeout(() => {
+              modalEl.classList.add('hidden');
+              sheet.style.transform = '';
+            }, 200);
+            triggerHaptic();
+          } else {
+            sheet.style.transform = 'translateY(0)';
+          }
+        });
+      }
+    }
+
+    [contactModal, mediaModal, updateModal].forEach(bindSheetDismissGestures);
+
+    // 8. In-App OTA Update Engine
+    const APP_VERSION = 'v1.1.9';
+    let latestApkUrl = 'https://github.com/WoeKen/Universal-Downloader/releases/latest';
+
+    async function checkForUpdates(manual = false) {
+      if (manual) {
+        triggerHaptic();
+        showToast('🔍 正在检查最新云端版本...');
+      }
+      try {
+        const res = await fetch('https://api.github.com/repos/WoeKen/Universal-Downloader/releases/latest', {
+          headers: { 'Accept': 'application/vnd.github.v3+json' }
+        });
+        if (!res.ok) throw new Error('网络请求失败');
+        const data = await res.json();
+        const remoteVer = data.tag_name || 'v1.1.9';
+        
+        // Find APK asset
+        const apkAsset = (data.assets || []).find(a => a.name && a.name.endsWith('.apk'));
+        if (apkAsset && apkAsset.browser_download_url) {
+          latestApkUrl = apkAsset.browser_download_url;
+        } else {
+          latestApkUrl = data.html_url || 'https://github.com/WoeKen/Universal-Downloader/releases/latest';
+        }
+
+        const isNewer = remoteVer !== APP_VERSION;
+        if (isNewer || manual) {
+          document.getElementById('currentVerText').textContent = APP_VERSION;
+          document.getElementById('latestVerText').textContent = remoteVer;
+          document.getElementById('updateChangelogContent').textContent = data.body || '新版本性能全面提升，去水印解析算法更强劲！';
+          updateModal.classList.remove('hidden');
+          triggerHaptic('success');
+        } else {
+          if (manual) showToast(`✅ 当前已是最新版本 (${APP_VERSION})`);
+        }
+      } catch (err) {
+        if (manual) showToast('无法连接更新服务器，请检查网络');
+      }
+    }
+
+    // Check Update Button
+    document.getElementById('checkUpdateBtn')?.addEventListener('click', () => checkForUpdates(true));
+    document.getElementById('closeUpdateBtn')?.addEventListener('click', () => updateModal.classList.add('hidden'));
+    document.getElementById('dismissUpdateBtn')?.addEventListener('click', () => updateModal.classList.add('hidden'));
+    document.getElementById('startInstallUpdateBtn')?.addEventListener('click', () => {
+      triggerHaptic('success');
+      showToast('🚀 正在拉起系统安装器 / 启动极速更新...');
+      if (window.NativeAndroid?.downloadAndInstallApk) {
+        window.NativeAndroid.downloadAndInstallApk(latestApkUrl);
+      } else {
+        window.open(latestApkUrl, '_blank');
+      }
     });
 
     // Contact Action Buttons (Copy / Open)
@@ -447,6 +567,7 @@
       if (copyVal) {
         navigator.clipboard?.writeText(copyVal);
         triggerHaptic('success');
+        showToast(`📋 已成功复制: ${copyVal}`);
       } else if (openUrl) {
         triggerHaptic();
         if (window.NativeAndroid?.openDeepLink) {
@@ -483,12 +604,14 @@
         } else if (nav === 'cast') {
           showToast('📱 局域网 Mesh 联动网关已启动，等待投递...');
         } else if (nav === 'settings') {
-          showToast('⚙️ 设置中心: 默认存储目录 /sdcard/Download/UniversalDownloader');
+          checkForUpdates(true);
         }
       });
     });
 
     window.addEventListener('focus', checkClipboardOnResume);
+    // Silent check for update on app startup
+    setTimeout(() => checkForUpdates(false), 2000);
   });
 
 })();

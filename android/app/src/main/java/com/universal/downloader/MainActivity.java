@@ -148,5 +148,16 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }
+
+        @JavascriptInterface
+        public void downloadAndInstallApk(String apkUrl) {
+            try {
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(apkUrl));
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 }
