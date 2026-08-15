@@ -153,132 +153,129 @@ public class MainActivity extends AppCompatActivity {
 
         @JavascriptInterface
         public void resolveNativeMedia(final String rawInput, final String callbackId) {
-            new Thread(new Runnable() {
+            runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
                     try {
                         // 1. Extract pure clean URL from messy Chinese/emoji text
                         java.util.regex.Matcher urlMatcher = java.util.regex.Pattern.compile("(https?://[\\w\\-._~:/?#\\[\\]@!$&'()*+,;=%]+)").matcher(rawInput);
-                        String cleanUrl = urlMatcher.find() ? urlMatcher.group(1).replaceAll("[\\u4e00-\\u9fa5)\\]}>,;。，！？、“”‘’]+$", "") : rawInput.trim();
+                        final String cleanUrl = urlMatcher.find() ? urlMatcher.group(1).replaceAll("[\\u4e00-\\u9fa5)\\]}>,;。，！？、“”‘’]+$", "") : rawInput.trim();
 
-                        // 2. Follow redirects (up to 6 hops) with real mobile User-Agent
-                        String currentUrl = cleanUrl;
-                        for (int hop = 0; hop < 6; hop++) {
-                            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(currentUrl).openConnection();
-                            conn.setInstanceFollowRedirects(false);
-                            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X)");
-                            conn.connect();
-                            int code = conn.getResponseCode();
-                            if (code == 301 || code == 302 || code == 303 || code == 307 || code == 308) {
-                                String loc = conn.getHeaderField("Location");
-                                conn.disconnect();
-                                if (loc != null && !loc.isEmpty()) {
-                                    currentUrl = loc;
-                                    continue;
+                        final WebView extractorView = new WebView(MainActivity.this);
+                        WebSettings es = extractorView.getSettings();
+                        es.setJavaScriptEnabled(true);
+                        es.setDomStorageEnabled(true);
+                        es.setMediaPlaybackRequiresUserGesture(false);
+                        es.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+                        es.setUserAgentString("Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.48");
+
+                        final boolean[] resolved = {false};
+                        final String[] capturedVideoUrl = {""};
+                        final String[] capturedCoverUrl = {""};
+                        final String[] capturedTitle = {""};
+
+                        final Runnable finishCallback = new Runnable() {
+                            @Override
+                            public void run() {
+                                if (resolved[0]) return;
+                                resolved[0] = true;
+                                try {
+                                    extractorView.stopLoading();
+                                    extractorView.destroy();
+                                } catch (Exception ignored) {}
+
+                                String finalUrl = capturedVideoUrl[0];
+                                String finalCover = capturedCoverUrl[0];
+                                String finalTitle = capturedTitle[0];
+                                if (finalTitle.isEmpty()) finalTitle = "抖音无水印高清视频";
+
+                                if (!finalUrl.isEmpty()) {
+                                    try {
+                                        final org.json.JSONObject result = new org.json.JSONObject();
+                                        result.put("platform", "douyin");
+                                        result.put("title", finalTitle);
+                                        result.put("cover", finalCover);
+                                        result.put("downloadUrl", finalUrl);
+                                        result.put("category", "video");
+
+                                        if (webView != null) {
+                                            String escaped = result.toString().replace("\\", "\\\\").replace("'", "\\'");
+                                            webView.evaluateJavascript("window.onNativeMediaResolved && window.onNativeMediaResolved('" + callbackId + "', '" + escaped + "');", null);
+                                        }
+                                        return;
+                                    } catch (Exception ignored) {}
+                                }
+
+                                if (webView != null) {
+                                    webView.evaluateJavascript("window.onNativeMediaResolved && window.onNativeMediaResolved('" + callbackId + "', null);", null);
                                 }
                             }
-                            conn.disconnect();
-                            break;
-                        }
+                        };
 
-                        // 3. Extract Video ID from redirected Long URL
-                        String videoId = "";
-                        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?:video/|modal_id=|item_ids=)(\\d+)").matcher(currentUrl);
-                        if (m.find()) {
-                            videoId = m.group(1);
-                        }
+                        // 8 seconds safety timeout
+                        extractorView.postDelayed(finishCallback, 8000);
 
-                        if (!videoId.isEmpty()) {
-                            String apiUrl = "https://www.iesdouyin.com/web/api/v2/aweme/iteminfo/?item_ids=" + videoId;
-                            java.net.HttpURLConnection apiConn = (java.net.HttpURLConnection) new java.net.URL(apiUrl).openConnection();
-                            apiConn.setRequestProperty("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X)");
-                            java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(apiConn.getInputStream()));
-                            StringBuilder sb = new StringBuilder();
-                            String line;
-                            while ((line = reader.readLine()) != null) {
-                                sb.append(line);
+                        extractorView.setWebViewClient(new WebViewClient() {
+                            @Override
+                            public android.webkit.WebResourceResponse shouldInterceptRequest(WebView view, android.webkit.WebResourceRequest request) {
+                                if (request != null && request.getUrl() != null) {
+                                    String reqUrl = request.getUrl().toString();
+                                    if (reqUrl.contains("play/?video_id=") || reqUrl.contains("douyinvod.com") || reqUrl.contains(".mp4") || reqUrl.contains("mime_type=video_mp4")) {
+                                        capturedVideoUrl[0] = reqUrl.replace("playwm", "play");
+                                        extractorView.postDelayed(finishCallback, 500);
+                                    }
+                                }
+                                return super.shouldInterceptRequest(view, request);
                             }
-                            reader.close();
-                            apiConn.disconnect();
 
-                            org.json.JSONObject json = new org.json.JSONObject(sb.toString());
-                            org.json.JSONArray items = json.optJSONArray("item_list");
-                            if (items != null && items.length() > 0) {
-                                org.json.JSONObject item = items.getJSONObject(0);
-                                String title = item.optString("desc", "抖音无水印高清视频");
-                                String cover = "";
-                                org.json.JSONObject videoObj = item.optJSONObject("video");
-                                if (videoObj != null) {
-                                    org.json.JSONObject coverObj = videoObj.optJSONObject("cover");
-                                    if (coverObj != null) {
-                                        org.json.JSONArray covers = coverObj.optJSONArray("url_list");
-                                        if (covers != null && covers.length() > 0) {
-                                            cover = covers.getString(0);
-                                        }
-                                    }
-                                    org.json.JSONObject playObj = videoObj.optJSONObject("play_addr");
-                                    String rawPlayUrl = "";
-                                    if (playObj != null) {
-                                        org.json.JSONArray plays = playObj.optJSONArray("url_list");
-                                        if (plays != null && plays.length() > 0) {
-                                            rawPlayUrl = plays.getString(0).replace("playwm", "play");
-                                        }
-                                    }
-
-                                    // Resolve final video stream redirect
-                                    String finalPlayUrl = rawPlayUrl;
-                                    if (!rawPlayUrl.isEmpty()) {
-                                        try {
-                                            java.net.HttpURLConnection playConn = (java.net.HttpURLConnection) new java.net.URL(rawPlayUrl).openConnection();
-                                            playConn.setInstanceFollowRedirects(false);
-                                            playConn.setRequestProperty("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X)");
-                                            playConn.connect();
-                                            int pCode = playConn.getResponseCode();
-                                            if (pCode == 301 || pCode == 302 || pCode == 307) {
-                                                String pLoc = playConn.getHeaderField("Location");
-                                                if (pLoc != null && !pLoc.isEmpty()) {
-                                                    finalPlayUrl = pLoc;
-                                                }
-                                            }
-                                            playConn.disconnect();
-                                        } catch (Exception ignored) {}
-                                    }
-
-                                    final org.json.JSONObject result = new org.json.JSONObject();
-                                    result.put("platform", "douyin");
-                                    result.put("title", title);
-                                    result.put("cover", cover);
-                                    result.put("downloadUrl", finalPlayUrl);
-                                    result.put("category", "video");
-
-                                    runOnUiThread(new Runnable() {
+                            @Override
+                            public void onPageFinished(WebView view, String url) {
+                                super.onPageFinished(view, url);
+                                view.evaluateJavascript(
+                                    "(function() {" +
+                                    "  var v = document.querySelector('video');" +
+                                    "  var src = v ? (v.currentSrc || v.src) : '';" +
+                                    "  var poster = v ? v.poster : '';" +
+                                    "  var title = document.title || '';" +
+                                    "  return JSON.stringify({ src: src, poster: poster, title: title });" +
+                                    "})()",
+                                    new android.webkit.ValueCallback<String>() {
                                         @Override
-                                        public void run() {
-                                            if (webView != null) {
-                                                String escaped = result.toString().replace("\\", "\\\\").replace("'", "\\'");
-                                                webView.evaluateJavascript("window.onNativeMediaResolved && window.onNativeMediaResolved('" + callbackId + "', '" + escaped + "');", null);
+                                        public void onReceiveValue(String val) {
+                                            if (val != null && !val.equals("null") && !val.isEmpty()) {
+                                                try {
+                                                    String rawStr = val;
+                                                    if (rawStr.startsWith("\"") && rawStr.endsWith("\"")) {
+                                                        rawStr = org.json.JSONObject.stringToValue(rawStr).toString();
+                                                    }
+                                                    org.json.JSONObject domJson = new org.json.JSONObject(rawStr);
+                                                    String dSrc = domJson.optString("src");
+                                                    String dPoster = domJson.optString("poster");
+                                                    String dTitle = domJson.optString("title");
+                                                    if (!dSrc.isEmpty() && capturedVideoUrl[0].isEmpty()) capturedVideoUrl[0] = dSrc.replace("playwm", "play");
+                                                    if (!dPoster.isEmpty()) capturedCoverUrl[0] = dPoster;
+                                                    if (!dTitle.isEmpty()) capturedTitle[0] = dTitle.replace(" - 抖音", "").replace("在抖音记录美好生活", "").trim();
+                                                } catch (Exception ignored) {}
+                                            }
+                                            if (!capturedVideoUrl[0].isEmpty()) {
+                                                extractorView.post(finishCallback);
                                             }
                                         }
-                                    });
-                                    return;
-                                }
+                                    }
+                                );
                             }
-                        }
+                        });
+
+                        extractorView.loadUrl(cleanUrl);
+
                     } catch (Exception e) {
                         e.printStackTrace();
-                    }
-
-                    // Fallback callback
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (webView != null) {
-                                webView.evaluateJavascript("window.onNativeMediaResolved && window.onNativeMediaResolved('" + callbackId + "', null);", null);
-                            }
+                        if (webView != null) {
+                            webView.evaluateJavascript("window.onNativeMediaResolved && window.onNativeMediaResolved('" + callbackId + "', null);", null);
                         }
-                    });
+                    }
                 }
-            }).start();
+            });
         }
 
         @JavascriptInterface

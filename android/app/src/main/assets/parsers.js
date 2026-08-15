@@ -64,13 +64,15 @@ const MobileParsers = {
 
   // 1. 抖音 100% 纯净无水印解析
   async parseDouyin(url) {
-    // 1. Try Native Android Bridge first (Zero CORS, 100% Native HTTP Redirect Resolution)
+    // 1. Try Native Android Bridge first (Zero CORS, 100% Native Chromium Stream Interception)
     if (window.NativeAndroid?.resolveNativeMedia) {
       try {
         const nativeResult = await new Promise((resolve) => {
           const callbackId = 'cb_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-          const timer = setTimeout(() => resolve(null), 5000);
-          window['onNativeMediaResolved_' + callbackId] = (dataStr) => {
+          const timer = setTimeout(() => resolve(null), 8500);
+          
+          if (!window._nativeMediaCallbacks) window._nativeMediaCallbacks = {};
+          window._nativeMediaCallbacks[callbackId] = (dataStr) => {
             clearTimeout(timer);
             try {
               resolve(JSON.parse(dataStr));
@@ -78,6 +80,14 @@ const MobileParsers = {
               resolve(null);
             }
           };
+
+          window.onNativeMediaResolved = function (cbId, dataStr) {
+            if (window._nativeMediaCallbacks && window._nativeMediaCallbacks[cbId]) {
+              window._nativeMediaCallbacks[cbId](dataStr);
+              delete window._nativeMediaCallbacks[cbId];
+            }
+          };
+
           window.NativeAndroid.resolveNativeMedia(url, callbackId);
         });
 
