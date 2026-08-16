@@ -338,10 +338,38 @@
     }
   };
 
+  const MODAL_IDS = ['mediaModal', 'contactModal', 'castModal', 'updateModal', 'settingsModal'];
+
+  function openModal(id) {
+    MODAL_IDS.forEach(mId => {
+      const el = document.getElementById(mId);
+      if (el) {
+        el.classList.add('hidden');
+        el.style.display = 'none';
+      }
+    });
+    const target = document.getElementById(id);
+    if (target) {
+      target.classList.remove('hidden');
+      target.style.display = 'flex';
+      const sheet = target.querySelector('.modal-sheet');
+      if (sheet) sheet.style.transform = '';
+    }
+  }
+
+  function closeModal(id) {
+    const target = document.getElementById(id);
+    if (target) {
+      target.classList.add('hidden');
+      target.style.display = 'none';
+    }
+  }
+
   // 5. In-App Media & File Modal (True Universal Previewer with Local & Online Hybrid Engine)
   function openMediaModal(task) {
     activePlayingTask = task;
-    const modal = document.getElementById('mediaModal');
+    openModal('mediaModal');
+
     const titleEl = document.getElementById('mediaTitle');
     const badgeEl = document.getElementById('playerTypeBadge');
     const videoBox = document.getElementById('videoContainer');
@@ -358,9 +386,7 @@
     const saveActionText = document.getElementById('saveActionText');
     const systemPlayerBtnText = document.getElementById('systemPlayerBtnText');
 
-    modal.classList.remove('hidden');
-
-    // Hide all first
+    // Hide subcontainers first
     [videoBox, audioBox, imageBox, apkBox, fileBox].forEach(el => {
       if (el) {
         el.style.display = 'none';
@@ -498,7 +524,6 @@
   });
 
   function closeMediaModal() {
-    const modal = document.getElementById('mediaModal');
     const video = document.getElementById('nativeVideoPlayer');
     const audio = document.getElementById('nativeAudioPlayer');
     if (video) {
@@ -509,7 +534,7 @@
       audio.pause();
       audio.src = '';
     }
-    modal.classList.add('hidden');
+    closeModal('mediaModal');
   }
 
   // 6. QR Code Switcher
@@ -521,6 +546,7 @@
       telegram: 'https://t.me/woeken318',
       gmail: 'mailto:songfx.shop318318@gmail.com'
     };
+    canvas.innerHTML = '';
     new window.QRCode(canvas, {
       text: urls[type] || urls.whatsapp,
       width: 160,
@@ -635,27 +661,20 @@
       }
     });
 
-    // Contact & All Modals
-    const contactModal = document.getElementById('contactModal');
-    const mediaModal = document.getElementById('mediaModal');
-    const updateModal = document.getElementById('updateModal');
-    const settingsModal = document.getElementById('settingsModal');
-    const castModal = document.getElementById('castModal');
-
+    // Header buttons
     document.getElementById('contactModalBtn')?.addEventListener('click', () => {
-      contactModal?.classList.remove('hidden');
+      openModal('contactModal');
       renderContactQr('whatsapp');
       triggerHaptic();
     });
-    document.getElementById('closeContactBtn')?.addEventListener('click', () => {
-      contactModal?.classList.add('hidden');
-    });
-    document.getElementById('closeSettingsBtn')?.addEventListener('click', () => {
-      settingsModal?.classList.add('hidden');
-    });
-    document.getElementById('closeCastBtn')?.addEventListener('click', () => {
-      castModal?.classList.add('hidden');
-    });
+
+    // Modal Close Buttons
+    document.getElementById('closeContactBtn')?.addEventListener('click', () => closeModal('contactModal'));
+    document.getElementById('closeSettingsBtn')?.addEventListener('click', () => closeModal('settingsModal'));
+    document.getElementById('closeCastBtn')?.addEventListener('click', () => closeModal('castModal'));
+    document.getElementById('closeUpdateBtn')?.addEventListener('click', () => closeModal('updateModal'));
+    document.getElementById('dismissUpdateBtn')?.addEventListener('click', () => closeModal('updateModal'));
+
     document.getElementById('copyCastIpBtn')?.addEventListener('click', () => {
       const ip = document.getElementById('localIpCastText')?.textContent || 'http://192.168.1.188:8080';
       navigator.clipboard?.writeText(ip);
@@ -663,8 +682,9 @@
       showToast('📋 已复制局域网直连投递地址！');
     });
 
-    // 7. Touch Swipe-Down Dismiss & Backdrop Dismiss Engine
-    function bindSheetDismissGestures(modalEl) {
+    // Touch Swipe-Down Dismiss & Backdrop Dismiss Engine
+    function bindSheetDismissGestures(modalId) {
+      const modalEl = document.getElementById(modalId);
       if (!modalEl) return;
       const sheet = modalEl.querySelector('.modal-sheet');
       const backdrop = modalEl.querySelector('.modal-backdrop');
@@ -672,13 +692,15 @@
 
       // Click Backdrop to dismiss
       backdrop?.addEventListener('click', () => {
-        modalEl.classList.add('hidden');
+        if (modalId === 'mediaModal') closeMediaModal();
+        else closeModal(modalId);
         triggerHaptic();
       });
 
       // Click Handle to dismiss
       handle?.addEventListener('click', () => {
-        modalEl.classList.add('hidden');
+        if (modalId === 'mediaModal') closeMediaModal();
+        else closeModal(modalId);
         triggerHaptic();
       });
 
@@ -713,7 +735,8 @@
           if (deltaY > 70) {
             sheet.style.transform = 'translateY(100%)';
             setTimeout(() => {
-              modalEl.classList.add('hidden');
+              if (modalId === 'mediaModal') closeMediaModal();
+              else closeModal(modalId);
               sheet.style.transform = '';
             }, 200);
             triggerHaptic();
@@ -724,7 +747,7 @@
       }
     }
 
-    [contactModal, mediaModal, updateModal, settingsModal, castModal].forEach(bindSheetDismissGestures);
+    MODAL_IDS.forEach(bindSheetDismissGestures);
 
     function renderCastQr() {
       const canvas = document.getElementById('castQrCanvas');
@@ -732,6 +755,7 @@
       const ip = 'http://192.168.1.188:8080';
       const ipText = document.getElementById('localIpCastText');
       if (ipText) ipText.textContent = ip;
+      canvas.innerHTML = '';
       new window.QRCode(canvas, {
         text: ip,
         width: 160,
@@ -741,7 +765,7 @@
     }
 
     // 8. In-App OTA Update Engine
-    const APP_VERSION = 'v1.2.0';
+    const APP_VERSION = 'v1.2.1';
     let latestApkUrl = 'https://github.com/WoeKen/Universal-Downloader/releases/latest';
 
     function isRemoteVersionNewer(remote, current) {
@@ -749,58 +773,44 @@
       const r = clean(remote);
       const c = clean(current);
       for (let i = 0; i < Math.max(r.length, c.length); i++) {
-        const rVal = r[i] || 0;
-        const cVal = c[i] || 0;
-        if (rVal > cVal) return true;
-        if (rVal < cVal) return false;
+        const rv = r[i] || 0;
+        const cv = c[i] || 0;
+        if (rv > cv) return true;
+        if (rv < cv) return false;
       }
       return false;
     }
 
-    async function checkForUpdates(manual = false) {
-      if (manual) {
-        triggerHaptic();
-        showToast('🔍 正在检查最新云端版本...');
-      }
+    async function checkForUpdates(isUserTriggered = false) {
+      if (isUserTriggered) showToast('🔍 正在检测 GitHub Releases 官方最新版本...');
       try {
-        const res = await fetch('https://api.github.com/repos/WoeKen/Universal-Downloader/releases/latest', {
+        const resp = await fetch('https://api.github.com/repos/WoeKen/Universal-Downloader/releases/latest', {
           headers: { 'Accept': 'application/vnd.github.v3+json' }
         });
-        if (!res.ok) throw new Error('网络请求失败');
-        const data = await res.json();
-        const remoteVer = data.tag_name || 'v1.1.9';
-        
-        // Find APK asset
-        const apkAsset = (data.assets || []).find(a => a.name && a.name.endsWith('.apk'));
-        if (apkAsset && apkAsset.browser_download_url) {
-          latestApkUrl = apkAsset.browser_download_url;
-        } else {
-          latestApkUrl = data.html_url || 'https://github.com/WoeKen/Universal-Downloader/releases/latest';
-        }
-
-        const isNewer = isRemoteVersionNewer(remoteVer, APP_VERSION);
-        if (isNewer) {
+        if (!resp.ok) throw new Error('Network error');
+        const data = await resp.json();
+        const remoteTag = data.tag_name || data.name || '';
+        if (isRemoteVersionNewer(remoteTag, APP_VERSION)) {
+          triggerHaptic('warning');
           document.getElementById('currentVerText').textContent = APP_VERSION;
-          document.getElementById('latestVerText').textContent = remoteVer;
-          document.getElementById('updateChangelogContent').textContent = data.body || '新版本性能全面提升，去水印解析算法更强劲！';
-          updateModal?.classList.remove('hidden');
+          document.getElementById('latestVerText').textContent = remoteTag;
+          document.getElementById('updateChangelogContent').textContent = data.body || '包含多项功能升级与稳定性优化。';
+          const apkAsset = data.assets?.find(a => a.name.endsWith('.apk'));
+          if (apkAsset) latestApkUrl = apkAsset.browser_download_url;
+          openModal('updateModal');
+        } else if (isUserTriggered) {
           triggerHaptic('success');
-        } else {
-          if (manual) {
-            triggerHaptic('success');
-            showToast(`✅ 当前已是最新版本 (${APP_VERSION})`);
-          }
+          showToast(`🎉 当前已是最新版本 (${APP_VERSION})`);
         }
       } catch (err) {
-        if (manual) showToast('无法连接更新服务器，请检查网络');
+        if (isUserTriggered) {
+          showToast('⚠️ 检测更新失败，请检查网络连接');
+        }
       }
     }
 
-    // Check Update Button
     document.getElementById('checkUpdateBtn')?.addEventListener('click', () => checkForUpdates(true));
     document.getElementById('settingsCheckUpdateBtn')?.addEventListener('click', () => checkForUpdates(true));
-    document.getElementById('closeUpdateBtn')?.addEventListener('click', () => updateModal?.classList.add('hidden'));
-    document.getElementById('dismissUpdateBtn')?.addEventListener('click', () => updateModal?.classList.add('hidden'));
     document.getElementById('startInstallUpdateBtn')?.addEventListener('click', () => {
       triggerHaptic('success');
       showToast('🚀 正在拉起系统安装器 / 启动极速更新...');
@@ -827,7 +837,7 @@
     });
 
     // Contact Action Buttons (Copy / Open)
-    contactModal?.addEventListener('click', e => {
+    document.getElementById('contactModal')?.addEventListener('click', e => {
       const copyVal = e.target.dataset.copy;
       const openUrl = e.target.dataset.url;
       const qrTarget = e.target.dataset.target;
@@ -866,16 +876,17 @@
       });
       triggerHaptic('selection');
       if (nav === 'tasks') {
+        MODAL_IDS.forEach(closeModal);
         window.scrollTo({ top: 0, behavior: 'smooth' });
         showToast('📋 任务中心');
       } else if (nav === 'contact') {
-        contactModal?.classList.remove('hidden');
+        openModal('contactModal');
         renderContactQr('whatsapp');
       } else if (nav === 'cast') {
-        castModal?.classList.remove('hidden');
+        openModal('castModal');
         renderCastQr();
       } else if (nav === 'settings') {
-        settingsModal?.classList.remove('hidden');
+        openModal('settingsModal');
       }
     }
 
