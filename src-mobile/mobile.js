@@ -167,6 +167,22 @@
       const thumb = t.cover || (isVideo ? defaultVideoSvg : defaultAudioSvg);
       const safeTitle = escapeHtml(t.title || '下载任务');
 
+      // Recover actual disk size if 0
+      if (isDone && (!t.size || t.size <= 0) && t.localPath && window.NativeAndroid?.getFileSize) {
+        try {
+          const diskBytes = window.NativeAndroid.getFileSize(t.localPath);
+          if (diskBytes > 0) {
+            t.size = diskBytes;
+            t.downloaded = diskBytes;
+          }
+        } catch (e) {}
+      }
+
+      const exactSize = (t.size && t.size > 0) ? t.size : (t.downloaded && t.downloaded > 0) ? t.downloaded : 0;
+      const sizeDisplayStr = isDone 
+        ? (exactSize > 0 ? formatBytes(exactSize) : '已完成')
+        : `${formatBytes(t.downloaded || 0)} / ${exactSize > 0 ? formatBytes(exactSize) : '计算中...'}`;
+
       return `
         <div class="mobile-task-card" data-id="${t.id}">
           <div class="task-top-meta">
@@ -175,7 +191,7 @@
               <div class="task-title" title="${safeTitle}">${safeTitle}</div>
               <div class="task-sub-meta">
                 <span>${t.platform ? escapeHtml(t.platform.toUpperCase()) : 'DIRECT'}</span>
-                <span>${formatBytes(t.downloaded || 0)} / ${t.size ? formatBytes(t.size) : '计算中...'}</span>
+                <span>${sizeDisplayStr}</span>
               </div>
             </div>
           </div>
@@ -345,18 +361,27 @@
     }
   };
 
-  window.onNativeDownloadCompleted = function (taskId, localFilePath, mimeType) {
+  window.onNativeDownloadCompleted = function (taskId, localFilePath, mimeType, fileSize) {
     const t = tasks.find(x => x.id === taskId);
     if (t) {
       t.status = 'completed';
       t.progress = 100;
-      t.downloaded = t.size || t.downloaded;
+      let finalBytes = Number(fileSize) || 0;
+      if (finalBytes <= 0 && localFilePath && window.NativeAndroid?.getFileSize) {
+        try {
+          finalBytes = window.NativeAndroid.getFileSize(localFilePath) || 0;
+        } catch (e) {}
+      }
+      if (finalBytes <= 0) finalBytes = t.size || t.downloaded || 0;
+
+      t.size = finalBytes;
+      t.downloaded = finalBytes;
       t.speed = 0;
       t.localPath = localFilePath;
       t.mimeType = mimeType;
       t.url = 'file://' + localFilePath;
 
-      const lower = localFilePath.toLowerCase();
+      const lower = (localFilePath || '').toLowerCase();
       if (lower.endsWith('.apk')) {
         t.category = 'apk';
       } else if (lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.png') || lower.endsWith('.webp') || lower.endsWith('.gif')) {
@@ -370,7 +395,7 @@
       saveTasks();
       renderTaskList();
       triggerHaptic('success');
-      showToast(`🎉 「${t.title.slice(0, 15)}...」下载完成！已妥善保存在下载目录`);
+      showToast(`🎉 「${t.title.slice(0, 15)}...」下载完成！(${finalBytes > 0 ? formatBytes(finalBytes) : '已入库'})`);
     }
   };
 
@@ -801,7 +826,7 @@
     }
 
     // 8. In-App OTA Update Engine
-    let APP_VERSION = 'v1.2.3';
+    let APP_VERSION = 'v1.2.4';
     if (window.NativeAndroid?.getAppVersion) {
       try {
         const nativeVer = window.NativeAndroid.getAppVersion();

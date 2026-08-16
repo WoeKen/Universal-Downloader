@@ -568,6 +568,19 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @JavascriptInterface
+        public long getFileSize(String filePath) {
+            try {
+                if (filePath != null && !filePath.isEmpty()) {
+                    File f = new File(filePath);
+                    if (f.exists() && f.isFile()) {
+                        return f.length();
+                    }
+                }
+            } catch (Exception ignored) {}
+            return 0;
+        }
+
+        @JavascriptInterface
         public void startDownload(final String taskId, final String downloadUrl, final String rawTitle, final boolean isVideo) {
             new Thread(new Runnable() {
                 @Override
@@ -660,7 +673,7 @@ public class MainActivity extends AppCompatActivity {
 
                         final File targetFile = new File(downloadDir, finalFileName.replaceAll("[\\\\/:*?\"<>|]", "_"));
 
-                        final long totalSize = conn.getContentLengthLong() > 0 ? conn.getContentLengthLong() : 10 * 1024 * 1024;
+                        final long totalSize = conn.getContentLengthLong() > 0 ? conn.getContentLengthLong() : 0;
                         in = conn.getInputStream();
                         out = new java.io.FileOutputStream(targetFile);
 
@@ -678,7 +691,8 @@ public class MainActivity extends AppCompatActivity {
                             if (now - lastTime >= 250) {
                                 final long speed = (downloaded - lastDownloaded) * 1000 / Math.max(1, now - lastTime);
                                 final long curDownloaded = downloaded;
-                                final int progress = (int) (downloaded * 100 / Math.max(1, totalSize));
+                                final long curTotal = totalSize > 0 ? totalSize : downloaded;
+                                final int progress = totalSize > 0 ? (int) (downloaded * 100 / totalSize) : 50;
                                 lastTime = now;
                                 lastDownloaded = downloaded;
 
@@ -686,7 +700,7 @@ public class MainActivity extends AppCompatActivity {
                                     @Override
                                     public void run() {
                                         if (webView != null) {
-                                            webView.evaluateJavascript("window.onNativeDownloadProgress && window.onNativeDownloadProgress('" + taskId + "', " + progress + ", " + curDownloaded + ", " + totalSize + ", " + speed + ");", null);
+                                            webView.evaluateJavascript("window.onNativeDownloadProgress && window.onNativeDownloadProgress('" + taskId + "', " + progress + ", " + curDownloaded + ", " + curTotal + ", " + speed + ");", null);
                                         }
                                     }
                                 });
@@ -696,6 +710,9 @@ public class MainActivity extends AppCompatActivity {
                         out.flush();
                         out.close();
                         in.close();
+
+                        // Exact file size on disk
+                        final long actualFileSize = targetFile.exists() ? targetFile.length() : downloaded;
 
                         // Register MediaStore for Video / Audio / Images
                         final String absolutePath = targetFile.getAbsolutePath();
@@ -713,7 +730,7 @@ public class MainActivity extends AppCompatActivity {
                             @Override
                             public void run() {
                                 if (webView != null) {
-                                    webView.evaluateJavascript("window.onNativeDownloadCompleted && window.onNativeDownloadCompleted('" + taskId + "', '" + absolutePath.replace("\\", "\\\\").replace("'", "\\'") + "', '" + finalMime + "');", null);
+                                    webView.evaluateJavascript("window.onNativeDownloadCompleted && window.onNativeDownloadCompleted('" + taskId + "', '" + absolutePath.replace("\\", "\\\\").replace("'", "\\'") + "', '" + finalMime + "', " + actualFileSize + ");", null);
                                 }
                             }
                         });
