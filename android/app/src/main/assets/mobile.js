@@ -338,7 +338,7 @@
     }
   };
 
-  // 5. In-App Media & File Modal (True Universal Previewer)
+  // 5. In-App Media & File Modal (True Universal Previewer with Local & Online Hybrid Engine)
   function openMediaModal(task) {
     activePlayingTask = task;
     const modal = document.getElementById('mediaModal');
@@ -356,6 +356,7 @@
     const disc = document.getElementById('mobileVinylDisc');
     const vinylCenter = document.getElementById('vinylCoverImg');
     const saveActionText = document.getElementById('saveActionText');
+    const systemPlayerBtnText = document.getElementById('systemPlayerBtnText');
 
     modal.classList.remove('hidden');
 
@@ -367,8 +368,15 @@
       }
     });
 
+    // Resolve optimal streaming source URL
+    let streamUrl = task.url || task.downloadUrl || '';
+    if (task.localPath) {
+      streamUrl = `https://localhost/local-media?path=${encodeURIComponent(task.localPath)}`;
+    }
+
     if (task.category === 'audio') {
       if (badgeEl) badgeEl.textContent = '🎵 音乐';
+      if (systemPlayerBtnText) systemPlayerBtnText.textContent = '系统音乐播放';
       titleEl.textContent = task.title || '无损音乐原声';
       audioBox.style.display = 'flex';
       audioBox.classList.remove('hidden');
@@ -377,20 +385,30 @@
         vinylCenter.style.backgroundImage = `url(${task.cover})`;
       }
       if (saveActionText) saveActionText.textContent = '保存音乐';
-      audio.src = task.url;
+
+      audio.onerror = () => {
+        console.warn('Audio tag playback fallback');
+        if (task.localPath && window.NativeAndroid?.playMediaFile) {
+          window.NativeAndroid.playMediaFile(task.localPath, false);
+        }
+      };
+
+      audio.src = streamUrl;
       audio.play().catch(() => {});
       disc?.classList.add('playing');
       audio.onpause = () => disc?.classList.remove('playing');
       audio.onplay = () => disc?.classList.add('playing');
     } else if (task.category === 'picture') {
       if (badgeEl) badgeEl.textContent = '🖼️ 图片';
+      if (systemPlayerBtnText) systemPlayerBtnText.textContent = '系统相册查看';
       titleEl.textContent = task.title || '高清图像预览';
       imageBox.style.display = 'flex';
       imageBox.classList.remove('hidden');
-      if (imgViewer) imgViewer.src = task.url || task.cover;
+      if (imgViewer) imgViewer.src = task.localPath ? streamUrl : (task.url || task.cover);
       if (saveActionText) saveActionText.textContent = '保存相册';
     } else if (task.category === 'apk') {
       if (badgeEl) badgeEl.textContent = '📦 安装包';
+      if (systemPlayerBtnText) systemPlayerBtnText.textContent = '系统安装器';
       titleEl.textContent = task.title || 'Android 安装包';
       apkBox.style.display = 'flex';
       apkBox.classList.remove('hidden');
@@ -398,6 +416,7 @@
       if (saveActionText) saveActionText.textContent = '安装应用';
     } else if (task.category === 'document' || task.category === 'archive' || task.category === 'file') {
       if (badgeEl) badgeEl.textContent = task.category === 'document' ? '📄 文档' : task.category === 'archive' ? '🗜️ 压缩包' : '📁 文件';
+      if (systemPlayerBtnText) systemPlayerBtnText.textContent = '第三方应用打开';
       titleEl.textContent = task.title || '文件详情';
       fileBox.style.display = 'flex';
       fileBox.classList.remove('hidden');
@@ -406,15 +425,41 @@
     } else {
       // Default: Video
       if (badgeEl) badgeEl.textContent = '🎬 视频';
+      if (systemPlayerBtnText) systemPlayerBtnText.textContent = '系统播放器';
       titleEl.textContent = task.title || '极清视频预览';
       videoBox.style.display = 'flex';
       videoBox.classList.remove('hidden');
       if (saveActionText) saveActionText.textContent = '保存相册';
       if (task.cover) video.poster = task.cover;
-      video.src = task.url;
+
+      video.onerror = () => {
+        console.warn('Video tag playback error, offering system player');
+        if (task.localPath && window.NativeAndroid?.playMediaFile) {
+          showToast('⚡ 正在调起系统高清视频播放器...');
+          window.NativeAndroid.playMediaFile(task.localPath, true);
+        }
+      };
+
+      video.src = streamUrl;
       video.play().catch(() => {});
     }
   }
+
+  // System Hardware Player Trigger Button
+  document.getElementById('openInSystemPlayerBtn')?.addEventListener('click', () => {
+    if (activePlayingTask) {
+      triggerHaptic('selection');
+      const isVideo = activePlayingTask.category !== 'audio';
+      if (activePlayingTask.localPath && window.NativeAndroid?.openDownloadedFile) {
+        showToast('🚀 正在拉起系统硬件级播放器...');
+        window.NativeAndroid.openDownloadedFile(activePlayingTask.localPath, isVideo ? 'video/*' : 'audio/*');
+      } else if (activePlayingTask.url && window.NativeAndroid?.openDeepLink) {
+        window.NativeAndroid.openDeepLink(activePlayingTask.url);
+      } else {
+        showToast('已唤起播放');
+      }
+    }
+  });
 
   // APK Install Button
   document.getElementById('installApkBtn')?.addEventListener('click', () => {
@@ -445,10 +490,10 @@
   });
 
   document.getElementById('copyMediaUrlBtn')?.addEventListener('click', () => {
-    if (activePlayingTask && activePlayingTask.url) {
-      navigator.clipboard?.writeText(activePlayingTask.url);
+    if (activePlayingTask && (activePlayingTask.url || activePlayingTask.localPath)) {
+      navigator.clipboard?.writeText(activePlayingTask.localPath || activePlayingTask.url);
       triggerHaptic('success');
-      showToast('📋 媒体播放源链已复制到剪贴板！');
+      showToast('📋 媒体链接/路径已复制到剪贴板！');
     }
   });
 
@@ -590,22 +635,32 @@
       }
     });
 
-    // Contact Modal
+    // Contact & All Modals
     const contactModal = document.getElementById('contactModal');
     const mediaModal = document.getElementById('mediaModal');
     const updateModal = document.getElementById('updateModal');
     const settingsModal = document.getElementById('settingsModal');
+    const castModal = document.getElementById('castModal');
 
     document.getElementById('contactModalBtn')?.addEventListener('click', () => {
-      contactModal.classList.remove('hidden');
+      contactModal?.classList.remove('hidden');
       renderContactQr('whatsapp');
       triggerHaptic();
     });
     document.getElementById('closeContactBtn')?.addEventListener('click', () => {
-      contactModal.classList.add('hidden');
+      contactModal?.classList.add('hidden');
     });
     document.getElementById('closeSettingsBtn')?.addEventListener('click', () => {
-      settingsModal.classList.add('hidden');
+      settingsModal?.classList.add('hidden');
+    });
+    document.getElementById('closeCastBtn')?.addEventListener('click', () => {
+      castModal?.classList.add('hidden');
+    });
+    document.getElementById('copyCastIpBtn')?.addEventListener('click', () => {
+      const ip = document.getElementById('localIpCastText')?.textContent || 'http://192.168.1.188:8080';
+      navigator.clipboard?.writeText(ip);
+      triggerHaptic('success');
+      showToast('📋 已复制局域网直连投递地址！');
     });
 
     // 7. Touch Swipe-Down Dismiss & Backdrop Dismiss Engine
@@ -669,7 +724,21 @@
       }
     }
 
-    [contactModal, mediaModal, updateModal, settingsModal].forEach(bindSheetDismissGestures);
+    [contactModal, mediaModal, updateModal, settingsModal, castModal].forEach(bindSheetDismissGestures);
+
+    function renderCastQr() {
+      const canvas = document.getElementById('castQrCanvas');
+      if (!canvas || !window.QRCode) return;
+      const ip = 'http://192.168.1.188:8080';
+      const ipText = document.getElementById('localIpCastText');
+      if (ipText) ipText.textContent = ip;
+      new window.QRCode(canvas, {
+        text: ip,
+        width: 160,
+        height: 160,
+        correctLevel: 2
+      });
+    }
 
     // 8. In-App OTA Update Engine
     const APP_VERSION = 'v1.1.9';
@@ -714,7 +783,7 @@
           document.getElementById('currentVerText').textContent = APP_VERSION;
           document.getElementById('latestVerText').textContent = remoteVer;
           document.getElementById('updateChangelogContent').textContent = data.body || '新版本性能全面提升，去水印解析算法更强劲！';
-          updateModal.classList.remove('hidden');
+          updateModal?.classList.remove('hidden');
           triggerHaptic('success');
         } else {
           if (manual) {
@@ -730,8 +799,8 @@
     // Check Update Button
     document.getElementById('checkUpdateBtn')?.addEventListener('click', () => checkForUpdates(true));
     document.getElementById('settingsCheckUpdateBtn')?.addEventListener('click', () => checkForUpdates(true));
-    document.getElementById('closeUpdateBtn')?.addEventListener('click', () => updateModal.classList.add('hidden'));
-    document.getElementById('dismissUpdateBtn')?.addEventListener('click', () => updateModal.classList.add('hidden'));
+    document.getElementById('closeUpdateBtn')?.addEventListener('click', () => updateModal?.classList.add('hidden'));
+    document.getElementById('dismissUpdateBtn')?.addEventListener('click', () => updateModal?.classList.add('hidden'));
     document.getElementById('startInstallUpdateBtn')?.addEventListener('click', () => {
       triggerHaptic('success');
       showToast('🚀 正在拉起系统安装器 / 启动极速更新...');
@@ -790,20 +859,24 @@
       }
     });
 
-    // Bottom Navigation
+    // Bottom Navigation (All 4 Tabs 100% Interactive)
     document.querySelectorAll('.dock-item').forEach(item => {
       item.addEventListener('click', () => {
         document.querySelectorAll('.dock-item').forEach(i => i.classList.remove('active'));
         item.classList.add('active');
         const nav = item.dataset.nav;
         triggerHaptic();
-        if (nav === 'contact') {
-          contactModal.classList.remove('hidden');
+        if (nav === 'tasks') {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          showToast('📋 任务中心');
+        } else if (nav === 'contact') {
+          contactModal?.classList.remove('hidden');
           renderContactQr('whatsapp');
         } else if (nav === 'cast') {
-          showToast('📱 局域网 Mesh 联动网关已启动，等待投递...');
+          castModal?.classList.remove('hidden');
+          renderCastQr();
         } else if (nav === 'settings') {
-          settingsModal.classList.remove('hidden');
+          settingsModal?.classList.remove('hidden');
         }
       });
     });

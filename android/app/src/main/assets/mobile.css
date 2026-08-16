@@ -1060,9 +1060,9 @@ body.light-theme .brand-title {
 /* 3. Flagship Action Buttons Grid */
 .player-actions-grid {
   display: grid;
-  grid-template-columns: 1.3fr 1.1fr 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .player-action-pill {
@@ -1078,6 +1078,12 @@ body.light-theme .brand-title {
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.player-action-pill.highlight {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
 }
 
 .player-action-pill.primary {

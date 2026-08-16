@@ -36,6 +36,8 @@ public class MainActivity extends AppCompatActivity {
         settings.setDatabaseEnabled(true);
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
+        settings.setAllowFileAccessFromFileURLs(true);
+        settings.setAllowUniversalAccessFromFileURLs(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
@@ -47,6 +49,37 @@ public class MainActivity extends AppCompatActivity {
         webView.addJavascriptInterface(new AndroidNativeBridge(), "NativeAndroid");
 
         webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public android.webkit.WebResourceResponse shouldInterceptRequest(WebView view, android.webkit.WebResourceRequest request) {
+                if (request != null && request.getUrl() != null) {
+                    Uri reqUri = request.getUrl();
+                    if ("localhost".equals(reqUri.getHost()) && "/local-media".equals(reqUri.getPath())) {
+                        String pathParam = reqUri.getQueryParameter("path");
+                        if (pathParam != null && !pathParam.isEmpty()) {
+                            try {
+                                File mediaFile = new File(pathParam);
+                                if (mediaFile.exists() && mediaFile.canRead()) {
+                                    String mime = "video/mp4";
+                                    String lower = mediaFile.getName().toLowerCase();
+                                    if (lower.endsWith(".mp3") || lower.endsWith(".m4a") || lower.endsWith(".wav") || lower.endsWith(".ogg") || lower.endsWith(".flac")) {
+                                        mime = "audio/mpeg";
+                                    } else if (lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png") || lower.endsWith(".webp") || lower.endsWith(".gif")) {
+                                        mime = "image/jpeg";
+                                    }
+                                    java.util.Map<String, String> responseHeaders = new java.util.HashMap<>();
+                                    responseHeaders.put("Access-Control-Allow-Origin", "*");
+                                    responseHeaders.put("Accept-Ranges", "bytes");
+                                    return new android.webkit.WebResourceResponse(mime, "UTF-8", 200, "OK", responseHeaders, new java.io.FileInputStream(mediaFile));
+                                }
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+                }
+                return super.shouldInterceptRequest(view, request);
+            }
+
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
@@ -680,11 +713,18 @@ public class MainActivity extends AppCompatActivity {
                         }
 
                         String effectiveMime = (mimeType != null && !mimeType.isEmpty() && !mimeType.equals("null")) ? mimeType : "*/*";
-                        if (filePath.toLowerCase().endsWith(".apk")) {
+                        String lowerPath = filePath.toLowerCase();
+                        if (lowerPath.endsWith(".apk")) {
                             effectiveMime = "application/vnd.android.package-archive";
-                        } else if (filePath.toLowerCase().endsWith(".pdf")) {
+                        } else if (lowerPath.endsWith(".mp4") || lowerPath.endsWith(".mkv") || lowerPath.endsWith(".webm") || lowerPath.endsWith(".mov") || lowerPath.endsWith(".3gp")) {
+                            effectiveMime = "video/*";
+                        } else if (lowerPath.endsWith(".mp3") || lowerPath.endsWith(".m4a") || lowerPath.endsWith(".wav") || lowerPath.endsWith(".flac") || lowerPath.endsWith(".ogg") || lowerPath.endsWith(".aac")) {
+                            effectiveMime = "audio/*";
+                        } else if (lowerPath.endsWith(".jpg") || lowerPath.endsWith(".jpeg") || lowerPath.endsWith(".png") || lowerPath.endsWith(".webp") || lowerPath.endsWith(".gif")) {
+                            effectiveMime = "image/*";
+                        } else if (lowerPath.endsWith(".pdf")) {
                             effectiveMime = "application/pdf";
-                        } else if (filePath.toLowerCase().endsWith(".zip")) {
+                        } else if (lowerPath.endsWith(".zip")) {
                             effectiveMime = "application/zip";
                         }
 
@@ -697,6 +737,11 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             });
+        }
+
+        @JavascriptInterface
+        public void playMediaFile(final String filePath, final boolean isVideo) {
+            openDownloadedFile(filePath, isVideo ? "video/*" : "audio/*");
         }
 
         @JavascriptInterface

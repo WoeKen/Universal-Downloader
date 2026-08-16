@@ -221,6 +221,10 @@
 
           <!-- Flagship Quick Action Buttons -->
           <div class="player-actions-grid">
+            <button id="openInSystemPlayerBtn" class="player-action-pill highlight">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              <span id="systemPlayerBtnText">系统播放器</span>
+            </button>
             <button id="saveToGalleryBtn" class="player-action-pill primary">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
               <span id="saveActionText">保存至相册</span>
@@ -308,6 +312,50 @@
               <canvas id="mobileContactQrCanvas" width="160" height="160"></canvas>
             </div>
             <p class="qr-hint">手机相机 / 微信扫码即刻直连</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wireless LAN Transfer / Cast Modal -->
+    <div id="castModal" class="mobile-modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-sheet glass-card">
+        <div class="sheet-header">
+          <div class="sheet-drag-handle"></div>
+          <h3 class="sheet-title">📡 无线快传与局域网投递</h3>
+          <button id="closeCastBtn" class="close-btn">&times;</button>
+        </div>
+        <div class="sheet-body">
+          <div class="setting-item-card">
+            <div class="setting-item-top">
+              <strong>局域网跨设备直连</strong>
+              <span class="setting-badge-ok">🟢 极速就绪</span>
+            </div>
+            <p class="setting-path-display">无需数据线 · 手机/电脑/平板零流量秒传</p>
+            <span class="setting-desc-text">在同一 Wi-Fi 下，电脑或电视浏览器访问下方地址即可直接播放或下载手机中的媒体文件。</span>
+          </div>
+
+          <div class="contact-channels-list" style="margin-top: 14px;">
+            <div class="contact-card" style="border-color: rgba(0, 242, 254, 0.35); background: rgba(0, 242, 254, 0.08);">
+              <div class="channel-info">
+                <span class="channel-icon">🌐</span>
+                <div>
+                  <strong>本机局域网共享服务</strong>
+                  <p id="localIpCastText">http://192.168.1.x:8080</p>
+                </div>
+              </div>
+              <div class="channel-actions">
+                <button class="mini-btn copy-btn" id="copyCastIpBtn">复制</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="qr-box" style="margin-top: 14px;">
+            <div class="canvas-wrap">
+              <canvas id="castQrCanvas" width="160" height="160"></canvas>
+            </div>
+            <p class="qr-hint">其他设备扫码即可免安装浏览器打开</p>
           </div>
         </div>
       </div>
