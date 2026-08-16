@@ -598,11 +598,13 @@ body.light-theme .brand-title {
   padding-bottom: var(--safe-bottom);
   background: var(--glass-bg);
   backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
   border-top: 1px solid var(--glass-border);
   display: flex;
   align-items: center;
   justify-content: space-around;
-  z-index: 60;
+  z-index: 990;
+  pointer-events: auto;
 }
 
 .dock-item {
@@ -615,11 +617,20 @@ body.light-theme .brand-title {
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  width: 60px;
+  width: 68px;
+  height: 48px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.dock-item svg,
+.dock-item span {
+  pointer-events: none;
 }
 
 .dock-item span {
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 600;
 }
 
@@ -634,13 +645,13 @@ body.light-theme .brand-title {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 100;
+  z-index: 1000;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
 }
 
-.mobile-modal.hidden { display: none; }
+.mobile-modal.hidden { display: none !important; }
 
 .modal-backdrop {
   position: absolute;

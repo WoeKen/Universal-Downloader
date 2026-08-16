@@ -741,7 +741,7 @@
     }
 
     // 8. In-App OTA Update Engine
-    const APP_VERSION = 'v1.1.9';
+    const APP_VERSION = 'v1.2.0';
     let latestApkUrl = 'https://github.com/WoeKen/Universal-Downloader/releases/latest';
 
     function isRemoteVersionNewer(remote, current) {
@@ -859,27 +859,42 @@
       }
     });
 
-    // Bottom Navigation (All 4 Tabs 100% Interactive)
+    function switchNavTab(nav) {
+      if (!nav) return;
+      document.querySelectorAll('.dock-item').forEach(i => {
+        i.classList.toggle('active', i.dataset.nav === nav);
+      });
+      triggerHaptic('selection');
+      if (nav === 'tasks') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        showToast('📋 任务中心');
+      } else if (nav === 'contact') {
+        contactModal?.classList.remove('hidden');
+        renderContactQr('whatsapp');
+      } else if (nav === 'cast') {
+        castModal?.classList.remove('hidden');
+        renderCastQr();
+      } else if (nav === 'settings') {
+        settingsModal?.classList.remove('hidden');
+      }
+    }
+
+    // Direct click handler
     document.querySelectorAll('.dock-item').forEach(item => {
-      item.addEventListener('click', () => {
-        document.querySelectorAll('.dock-item').forEach(i => i.classList.remove('active'));
-        item.classList.add('active');
-        const nav = item.dataset.nav;
-        triggerHaptic();
-        if (nav === 'tasks') {
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-          showToast('📋 任务中心');
-        } else if (nav === 'contact') {
-          contactModal?.classList.remove('hidden');
-          renderContactQr('whatsapp');
-        } else if (nav === 'cast') {
-          castModal?.classList.remove('hidden');
-          renderCastQr();
-        } else if (nav === 'settings') {
-          settingsModal?.classList.remove('hidden');
-        }
+      item.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        switchNavTab(item.dataset.nav);
       });
     });
+
+    // Global capture phase fallback delegation
+    document.addEventListener('click', e => {
+      const dockBtn = e.target.closest('.dock-item');
+      if (dockBtn && dockBtn.dataset.nav) {
+        switchNavTab(dockBtn.dataset.nav);
+      }
+    }, true);
 
     window.addEventListener('focus', checkClipboardOnResume);
     // Silent check for update on app startup
