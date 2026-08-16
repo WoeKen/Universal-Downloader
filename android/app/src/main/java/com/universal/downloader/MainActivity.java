@@ -338,7 +338,132 @@ public class MainActivity extends AppCompatActivity {
                             } catch (Exception ignored) {}
                         }
 
-                        // 4. Douyin Resolution (Aweme Detail API with Guest Cookies)
+                        // 4. Twitter / X Direct Video Resolution
+                        if (currentUrl.contains("twitter.com") || currentUrl.contains("x.com")) {
+                            try {
+                                String tweetId = "";
+                                java.util.regex.Matcher tMatcher = java.util.regex.Pattern.compile("status/(\\d+)").matcher(currentUrl);
+                                if (tMatcher.find()) {
+                                    tweetId = tMatcher.group(1);
+                                }
+
+                                if (!tweetId.isEmpty()) {
+                                    String twApi = "https://api.vxtwitter.com/Twitter/status/" + tweetId;
+                                    java.net.HttpURLConnection twConn = (java.net.HttpURLConnection) new java.net.URL(twApi).openConnection();
+                                    twConn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+                                    twConn.setConnectTimeout(6000);
+                                    twConn.setReadTimeout(6000);
+
+                                    java.io.BufferedReader twReader = new java.io.BufferedReader(new java.io.InputStreamReader(twConn.getInputStream()));
+                                    StringBuilder twHtml = new StringBuilder();
+                                    String line;
+                                    while ((line = twReader.readLine()) != null) {
+                                        twHtml.append(line);
+                                    }
+                                    twReader.close();
+                                    twConn.disconnect();
+                                    String html = twHtml.toString();
+
+                                    String twVideo = "";
+                                    java.util.regex.Matcher vMat = java.util.regex.Pattern.compile("<meta\\s+(?:property|name)=[\"'](?:og:video|og:video:secure_url|twitter:player:stream)[\"']\\s+content=[\"']([^\"']+)[\"']").matcher(html);
+                                    if (vMat.find()) twVideo = vMat.group(1).replace("&amp;", "&");
+
+                                    String twCover = "";
+                                    java.util.regex.Matcher cMat = java.util.regex.Pattern.compile("<meta\\s+(?:property|name)=[\"']og:image[\"']\\s+content=[\"']([^\"']+)[\"']").matcher(html);
+                                    if (cMat.find()) twCover = cMat.group(1).replace("&amp;", "&");
+
+                                    String twTitle = "X / Twitter 极清视频";
+                                    java.util.regex.Matcher tMat = java.util.regex.Pattern.compile("<meta\\s+(?:property|name)=[\"'](?:og:description|og:title)[\"']\\s+content=[\"']([^\"']+)[\"']").matcher(html);
+                                    if (tMat.find()) {
+                                        String clean = tMat.group(1).replace("&amp;", "&").replaceAll("<[^>]+>", "").trim();
+                                        if (!clean.isEmpty()) twTitle = clean.length() > 60 ? clean.substring(0, 60) + "..." : clean;
+                                    }
+
+                                    if (!twVideo.isEmpty()) {
+                                        final org.json.JSONObject result = new org.json.JSONObject();
+                                        result.put("platform", "twitter");
+                                        result.put("title", twTitle);
+                                        result.put("cover", twCover);
+                                        result.put("downloadUrl", twVideo);
+                                        result.put("category", reqMode.equals("audio") ? "audio" : "video");
+
+                                        runOnUiThread(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                if (webView != null) {
+                                                    String escaped = result.toString().replace("\\", "\\\\").replace("'", "\\'");
+                                                    webView.evaluateJavascript("window.onNativeMediaResolved && window.onNativeMediaResolved('" + callbackId + "', '" + escaped + "');", null);
+                                                }
+                                            }
+                                        });
+                                        return;
+                                    }
+                                }
+                            } catch (Exception ignored) {}
+                        }
+
+                        // 5. Generic Tube & Video Portals Resolution (Pornhub, Xvideos, etc.)
+                        if (currentUrl.contains("pornhub.com") || currentUrl.contains("xvideos.com") || currentUrl.contains("spankbang.com") || currentUrl.contains("redtube.com")) {
+                            try {
+                                java.net.HttpURLConnection tubeConn = (java.net.HttpURLConnection) new java.net.URL(currentUrl).openConnection();
+                                tubeConn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
+                                tubeConn.setRequestProperty("Accept-Language", "en-US,en;q=0.9");
+                                tubeConn.setConnectTimeout(8000);
+                                tubeConn.setReadTimeout(8000);
+
+                                java.io.BufferedReader tReader = new java.io.BufferedReader(new java.io.InputStreamReader(tubeConn.getInputStream()));
+                                StringBuilder tHtml = new StringBuilder();
+                                String line;
+                                while ((line = tReader.readLine()) != null) {
+                                    tHtml.append(line);
+                                }
+                                tReader.close();
+                                tubeConn.disconnect();
+                                String html = tHtml.toString();
+
+                                String tubeVideo = "";
+                                java.util.regex.Matcher vMat = java.util.regex.Pattern.compile("\"videoUrl\"\\s*:\\s*\"(https:[^\"]+?)\"").matcher(html);
+                                while (vMat.find()) {
+                                    tubeVideo = vMat.group(1).replace("\\/", "/");
+                                }
+                                if (tubeVideo.isEmpty()) {
+                                    java.util.regex.Matcher vMat2 = java.util.regex.Pattern.compile("<meta\\s+(?:property|name)=[\"'](?:og:video|og:video:url|og:video:secure_url)[\"']\\s+content=[\"']([^\"']+)[\"']").matcher(html);
+                                    if (vMat2.find()) tubeVideo = vMat2.group(1).replace("&amp;", "&");
+                                }
+
+                                String tubeCover = "";
+                                java.util.regex.Matcher cMat = java.util.regex.Pattern.compile("<meta\\s+(?:property|name)=[\"']og:image[\"']\\s+content=[\"']([^\"']+)[\"']").matcher(html);
+                                if (cMat.find()) tubeCover = cMat.group(1).replace("&amp;", "&");
+
+                                String tubeTitle = "高清在线视频";
+                                java.util.regex.Matcher titMat = java.util.regex.Pattern.compile("<meta\\s+(?:property|name)=[\"']og:title[\"']\\s+content=[\"']([^\"']+)[\"']").matcher(html);
+                                if (titMat.find()) {
+                                    tubeTitle = titMat.group(1).replace("&amp;", "&").replaceAll("<[^>]+>", "").trim();
+                                }
+
+                                if (!tubeVideo.isEmpty()) {
+                                    final org.json.JSONObject result = new org.json.JSONObject();
+                                    result.put("platform", "tube");
+                                    result.put("title", tubeTitle);
+                                    result.put("cover", tubeCover);
+                                    result.put("downloadUrl", tubeVideo);
+                                    result.put("category", reqMode.equals("audio") ? "audio" : "video");
+
+                                    runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            if (webView != null) {
+                                                String escaped = result.toString().replace("\\", "\\\\").replace("'", "\\'");
+                                                webView.evaluateJavascript("window.onNativeMediaResolved && window.onNativeMediaResolved('" + callbackId + "', '" + escaped + "');", null);
+                                            }
+                                        }
+                                    });
+                                    return;
+                                }
+                            } catch (Exception ignored) {}
+                        }
+
+                        // 6. Douyin Resolution (Aweme Detail API with Guest Cookies)
                         String videoId = "";
                         java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?:video/|modal_id=|item_ids=)(\\d+)").matcher(currentUrl);
                         if (m.find()) {
@@ -417,7 +542,7 @@ public class MainActivity extends AppCompatActivity {
                                                     @Override
                                                     public void run() {
                                                         if (webView != null) {
-                                                            String escaped = result.toString().replace("\\", "\\\\").replace("'", "\\'");
+                                                             String escaped = result.toString().replace("\\", "\\\\").replace("'", "\\'");
                                                             webView.evaluateJavascript("window.onNativeMediaResolved && window.onNativeMediaResolved('" + callbackId + "', '" + escaped + "');", null);
                                                         }
                                                     }
@@ -469,7 +594,7 @@ public class MainActivity extends AppCompatActivity {
                         e.printStackTrace();
                     }
 
-                    // Fallback to Headless Web Stream Interception on UI Thread
+                    // Fallback to Universal Headless Chromium Web Stream Interception on UI Thread
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
@@ -477,13 +602,24 @@ public class MainActivity extends AppCompatActivity {
                                 java.util.regex.Matcher urlMatcher = java.util.regex.Pattern.compile("(https?://[\\w\\-._~:/?#\\[\\]@!$&'()*+,;=%]+)").matcher(rawInput);
                                 final String cleanUrl = urlMatcher.find() ? urlMatcher.group(1).replaceAll("[\\u4e00-\\u9fa5)\\]}>,;。，！？、“”‘’]+$", "") : rawInput.trim();
 
+                                String detectedPlat = "web_video";
+                                if (cleanUrl.contains("douyin.com")) detectedPlat = "douyin";
+                                else if (cleanUrl.contains("tiktok.com")) detectedPlat = "tiktok";
+                                else if (cleanUrl.contains("instagram.com") || cleanUrl.contains("instagr.am")) detectedPlat = "instagram";
+                                else if (cleanUrl.contains("twitter.com") || cleanUrl.contains("x.com")) detectedPlat = "twitter";
+                                else if (cleanUrl.contains("pornhub.com") || cleanUrl.contains("xvideos.com") || cleanUrl.contains("spankbang.com")) detectedPlat = "tube";
+                                else if (cleanUrl.contains("bilibili.com")) detectedPlat = "bilibili";
+                                else if (cleanUrl.contains("kuaishou.com")) detectedPlat = "kuaishou";
+                                else if (cleanUrl.contains("xiaohongshu.com")) detectedPlat = "xiaohongshu";
+                                final String platformTag = detectedPlat;
+
                                 final WebView extractorView = new WebView(MainActivity.this);
                                 WebSettings es = extractorView.getSettings();
                                 es.setJavaScriptEnabled(true);
                                 es.setDomStorageEnabled(true);
                                 es.setMediaPlaybackRequiresUserGesture(false);
                                 es.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-                                es.setUserAgentString("Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.48");
+                                es.setUserAgentString("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
 
                                 final boolean[] resolved = {false};
                                 final String[] capturedVideoUrl = {""};
@@ -503,16 +639,21 @@ public class MainActivity extends AppCompatActivity {
                                         String finalUrl = capturedVideoUrl[0];
                                         String finalCover = capturedCoverUrl[0];
                                         String finalTitle = capturedTitle[0];
-                                        if (finalTitle.isEmpty()) finalTitle = "抖音无水印高清视频";
+                                        if (finalTitle.isEmpty()) {
+                                            if (platformTag.equals("douyin")) finalTitle = "抖音无水印高清视频";
+                                            else if (platformTag.equals("twitter")) finalTitle = "X / Twitter 极清视频";
+                                            else if (platformTag.equals("instagram")) finalTitle = "Instagram 极清视频";
+                                            else finalTitle = "高清多媒体视频";
+                                        }
 
                                         if (!finalUrl.isEmpty()) {
                                             try {
                                                 final org.json.JSONObject result = new org.json.JSONObject();
-                                                result.put("platform", "douyin");
+                                                result.put("platform", platformTag);
                                                 result.put("title", finalTitle);
                                                 result.put("cover", finalCover);
                                                 result.put("downloadUrl", finalUrl);
-                                                result.put("category", "video");
+                                                result.put("category", reqMode.equals("audio") ? "audio" : "video");
 
                                                 if (webView != null) {
                                                     String escaped = result.toString().replace("\\", "\\\\").replace("'", "\\'");
@@ -535,9 +676,15 @@ public class MainActivity extends AppCompatActivity {
                                     public android.webkit.WebResourceResponse shouldInterceptRequest(WebView view, android.webkit.WebResourceRequest request) {
                                         if (request != null && request.getUrl() != null) {
                                             String reqUrl = request.getUrl().toString();
-                                            if (reqUrl.contains("play/?video_id=") || reqUrl.contains("douyinvod.com") || reqUrl.contains(".mp4") || reqUrl.contains("mime_type=video_mp4")) {
+                                            String lower = reqUrl.toLowerCase();
+                                            boolean isMediaStream = lower.contains(".mp4") || lower.contains(".m3u8") || lower.contains(".m4v") ||
+                                                lower.contains(".webm") || lower.contains(".flv") || lower.contains("mime_type=video") ||
+                                                lower.contains("video/mp4") || lower.contains("phncdn.com") || lower.contains("twimg.com") ||
+                                                lower.contains("cdninstagram.com") || lower.contains("douyinvod.com") || lower.contains("kspkg.com");
+
+                                            if (isMediaStream && !lower.contains(".jpg") && !lower.contains(".png") && !lower.contains(".webp") && !lower.contains(".gif")) {
                                                 capturedVideoUrl[0] = reqUrl.replace("playwm", "play");
-                                                extractorView.postDelayed(finishCallback, 500);
+                                                extractorView.postDelayed(finishCallback, 400);
                                             }
                                         }
                                         return super.shouldInterceptRequest(view, request);
@@ -548,10 +695,16 @@ public class MainActivity extends AppCompatActivity {
                                         super.onPageFinished(view, url);
                                         view.evaluateJavascript(
                                             "(function() {" +
-                                            "  var v = document.querySelector('video');" +
+                                            "  var v = document.querySelector('video') || document.querySelector('video source');" +
                                             "  var src = v ? (v.currentSrc || v.src) : '';" +
-                                            "  var poster = v ? v.poster : '';" +
+                                            "  var poster = v ? (v.poster || '') : '';" +
+                                            "  var metaV = document.querySelector('meta[property=\"og:video\"], meta[property=\"og:video:secure_url\"], meta[property=\"og:video:url\"], meta[name=\"twitter:player:stream\"]');" +
+                                            "  if (!src && metaV) src = metaV.content;" +
+                                            "  var metaImg = document.querySelector('meta[property=\"og:image\"], meta[name=\"twitter:image\"]');" +
+                                            "  if (!poster && metaImg) poster = metaImg.content;" +
                                             "  var title = document.title || '';" +
+                                            "  var metaT = document.querySelector('meta[property=\"og:title\"], meta[name=\"twitter:title\"]');" +
+                                            "  if (metaT && metaT.content) title = metaT.content;" +
                                             "  return JSON.stringify({ src: src, poster: poster, title: title });" +
                                             "})()",
                                             new android.webkit.ValueCallback<String>() {
@@ -559,7 +712,7 @@ public class MainActivity extends AppCompatActivity {
                                                 public void onReceiveValue(String val) {
                                                     if (val != null && !val.equals("null") && !val.isEmpty()) {
                                                         try {
-                                                            String rawStr = val;
+                                                             String rawStr = val;
                                                             if (rawStr.startsWith("\"") && rawStr.endsWith("\"") && rawStr.length() >= 2) {
                                                                 rawStr = rawStr.substring(1, rawStr.length() - 1).replace("\\\"", "\"").replace("\\\\", "\\");
                                                             }
@@ -568,8 +721,10 @@ public class MainActivity extends AppCompatActivity {
                                                             String dPoster = domJson.optString("poster");
                                                             String dTitle = domJson.optString("title");
                                                             if (!dSrc.isEmpty() && capturedVideoUrl[0].isEmpty()) capturedVideoUrl[0] = dSrc.replace("playwm", "play");
-                                                            if (!dPoster.isEmpty()) capturedCoverUrl[0] = dPoster;
-                                                            if (!dTitle.isEmpty()) capturedTitle[0] = dTitle.replace(" - 抖音", "").replace("在抖音记录美好生活", "").trim();
+                                                            if (!dPoster.isEmpty() && capturedCoverUrl[0].isEmpty()) capturedCoverUrl[0] = dPoster;
+                                                            if (!dTitle.isEmpty() && capturedTitle[0].isEmpty()) {
+                                                                capturedTitle[0] = dTitle.replace(" - 抖音", "").replace("在抖音记录美好生活", "").trim();
+                                                            }
                                                         } catch (Exception ignored) {}
                                                     }
                                                     if (!capturedVideoUrl[0].isEmpty()) {

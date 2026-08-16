@@ -354,8 +354,52 @@ const MobileParsers = {
     };
   },
 
-  // 6. 通用直链与全格式智能透析 (APK, 图片, 文档, 压缩包, 音频, 视频)
+  // 6. 通用直链与全格式智能透析 (APK, 图片, 文档, 压缩包, 音频, 视频, Tube 网站)
   async parseGeneric(url, mode = 'auto') {
+    const isAudioMode = mode === 'audio';
+
+    // 1. Try Native Android Universal Traffic Sniffer first if it's a web page URL
+    const isWebPage = !/\.(apk|zip|rar|7z|pdf|doc|docx|mp3|flac|png|jpg|jpeg|gif)$/i.test(url.split('?')[0]);
+    if (isWebPage && window.NativeAndroid?.resolveNativeMedia) {
+      try {
+        const nativeResult = await new Promise((resolve) => {
+          const callbackId = 'cb_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+          const timer = setTimeout(() => resolve(null), 8500);
+
+          if (!window._nativeMediaCallbacks) window._nativeMediaCallbacks = {};
+          window._nativeMediaCallbacks[callbackId] = (dataStr) => {
+            clearTimeout(timer);
+            try {
+              resolve(JSON.parse(dataStr));
+            } catch (e) {
+              resolve(null);
+            }
+          };
+
+          window.onNativeMediaResolved = function (cbId, dataStr) {
+            if (window._nativeMediaCallbacks && window._nativeMediaCallbacks[cbId]) {
+              window._nativeMediaCallbacks[cbId](dataStr);
+              delete window._nativeMediaCallbacks[cbId];
+            }
+          };
+
+          window.NativeAndroid.resolveNativeMedia(url, callbackId, mode);
+        });
+
+        if (nativeResult && nativeResult.downloadUrl && nativeResult.downloadUrl.startsWith('http')) {
+          const isAudio = isAudioMode || nativeResult.category === 'audio';
+          return {
+            platform: nativeResult.platform || 'web_video',
+            title: nativeResult.title || (isAudio ? '提取无损音频' : '极清视频流'),
+            cover: nativeResult.cover || this.createSvgCover(isAudio ? '音频提取' : '极清视频'),
+            downloadUrl: nativeResult.downloadUrl,
+            category: isAudio ? 'audio' : 'video',
+            extension: isAudio ? 'mp3' : 'mp4'
+          };
+        }
+      } catch (e) {}
+    }
+
     let filename = 'download_' + Date.now();
     let ext = 'bin';
     try {
