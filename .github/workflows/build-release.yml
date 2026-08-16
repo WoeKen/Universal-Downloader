@@ -33,7 +33,7 @@ jobs:
         shell: pwsh
         run: |
           if (Test-Path 'dist/win-unpacked') {
-            Compress-Archive -Path 'dist/win-unpacked/*' -DestinationPath 'dist/Universal-Downloader-v1.1.9-Windows-Portable.zip' -Force
+            Compress-Archive -Path 'dist/win-unpacked/*' -DestinationPath 'dist/Universal-Downloader-v1.2.0-Windows-Portable.zip' -Force
           }
 
       - name: Upload Windows Artifacts
@@ -103,9 +103,11 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          name: "🚀 Universal Downloader v1.2.0 (Windows & Android 旗舰双端发布)"
+          body_path: RELEASE_NOTES.md
           files: release-assets/*
           draft: false
           prerelease: false
-          generate_release_notes: true
+          generate_release_notes: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
