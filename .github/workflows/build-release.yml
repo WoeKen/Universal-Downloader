@@ -33,7 +33,7 @@ jobs:
         shell: pwsh
         run: |
           if (Test-Path 'dist/win-unpacked') {
-            Compress-Archive -Path 'dist/win-unpacked/*' -DestinationPath 'dist/Universal-Downloader-v1.2.7-Windows-Portable.zip' -Force
+            Compress-Archive -Path 'dist/win-unpacked/*' -DestinationPath 'dist/Universal-Downloader-v1.2.8-Windows-Portable.zip' -Force
           }
 
       - name: Prepare Clean Windows Assets
@@ -42,10 +42,10 @@ jobs:
           mkdir -p dist/clean-windows
           $setupExe = Get-ChildItem -Path 'dist' -Filter '*.exe' | Where-Object { $_.Name -notlike '*blockmap*' } | Select-Object -First 1
           if ($setupExe) {
-            Copy-Item $setupExe.FullName 'dist/clean-windows/Universal-Downloader-Setup-1.2.7.exe' -Force
+            Copy-Item $setupExe.FullName 'dist/clean-windows/Universal-Downloader-Setup-1.2.8.exe' -Force
           }
-          if (Test-Path 'dist/Universal-Downloader-v1.2.7-Windows-Portable.zip') {
-            Copy-Item 'dist/Universal-Downloader-v1.2.7-Windows-Portable.zip' 'dist/clean-windows/' -Force
+          if (Test-Path 'dist/Universal-Downloader-v1.2.8-Windows-Portable.zip') {
+            Copy-Item 'dist/Universal-Downloader-v1.2.8-Windows-Portable.zip' 'dist/clean-windows/' -Force
           }
           Get-ChildItem 'dist/clean-windows'
 
