@@ -801,14 +801,31 @@
     }
 
     // 8. In-App OTA Update Engine
-    const APP_VERSION = 'v1.2.1';
+    let APP_VERSION = 'v1.2.3';
+    if (window.NativeAndroid?.getAppVersion) {
+      try {
+        const nativeVer = window.NativeAndroid.getAppVersion();
+        if (nativeVer) APP_VERSION = nativeVer;
+      } catch (e) {}
+    }
+
+    const currentVerEl = document.getElementById('currentVerText');
+    if (currentVerEl) currentVerEl.textContent = APP_VERSION;
+    const settingsVerEl = document.getElementById('settingsAppVerDisplay');
+    if (settingsVerEl) settingsVerEl.textContent = `${APP_VERSION} (Production Release · ARM64 / Universal)`;
+
     let latestApkUrl = 'https://github.com/WoeKen/Universal-Downloader/releases/latest';
 
     function isRemoteVersionNewer(remote, current) {
-      const clean = v => (v || '').replace(/^v/i, '').trim().split('.').map(n => parseInt(n, 10) || 0);
+      if (!remote || !current) return false;
+      const clean = v => {
+        const cleaned = (v || '').replace(/[^0-9.]/g, '').trim();
+        return cleaned.split('.').map(n => parseInt(n, 10) || 0);
+      };
       const r = clean(remote);
       const c = clean(current);
-      for (let i = 0; i < Math.max(r.length, c.length); i++) {
+      const maxLen = Math.max(r.length, c.length);
+      for (let i = 0; i < maxLen; i++) {
         const rv = r[i] || 0;
         const cv = c[i] || 0;
         if (rv > cv) return true;
@@ -828,7 +845,7 @@
         const remoteTag = data.tag_name || data.name || '';
         if (isRemoteVersionNewer(remoteTag, APP_VERSION)) {
           triggerHaptic('warning');
-          document.getElementById('currentVerText').textContent = APP_VERSION;
+          if (currentVerEl) currentVerEl.textContent = APP_VERSION;
           document.getElementById('latestVerText').textContent = remoteTag;
           document.getElementById('updateChangelogContent').textContent = data.body || '包含多项功能升级与稳定性优化。';
           const apkAsset = data.assets?.find(a => a.name.endsWith('.apk'));

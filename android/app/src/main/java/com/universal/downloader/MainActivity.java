@@ -174,6 +174,16 @@ public class MainActivity extends AppCompatActivity {
     public class AndroidNativeBridge {
 
         @JavascriptInterface
+        public String getAppVersion() {
+            try {
+                android.content.pm.PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
+                return "v" + pInfo.versionName;
+            } catch (Exception e) {
+                return "v1.2.2";
+            }
+        }
+
+        @JavascriptInterface
         public void scanGalleryFile(String filePath, boolean isVideo) {
             try {
                 File file = new File(filePath);
