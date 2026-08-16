@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.ViewGroup;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -34,6 +35,7 @@ import java.util.regex.Pattern;
 public class MainActivity extends AppCompatActivity {
 
     private WebView webView;
+    private FrameLayout rootContainer;
     private ValueCallback<Uri[]> fileUploadCallback;
     private final static int FILE_CHOOSER_RESULT_CODE = 10001;
     private String pendingSharedText = null;
@@ -48,12 +50,12 @@ public class MainActivity extends AppCompatActivity {
             getWindow().setNavigationBarColor(android.graphics.Color.parseColor("#090c10"));
         }
 
-        FrameLayout container = new FrameLayout(this);
-        container.setBackgroundColor(android.graphics.Color.parseColor("#090c10"));
-        setContentView(container);
+        rootContainer = new FrameLayout(this);
+        rootContainer.setBackgroundColor(android.graphics.Color.parseColor("#090c10"));
+        setContentView(rootContainer);
 
         webView = new WebView(this);
-        container.addView(webView, new FrameLayout.LayoutParams(
+        rootContainer.addView(webView, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
         ));
@@ -74,7 +76,7 @@ public class MainActivity extends AppCompatActivity {
         settings.setDisplayZoomControls(false);
 
         // High compatibility modern Android User Agent
-        settings.setUserAgentString("Mozilla/5.0 (Linux; Android 14; Mobile; UniversalDownloader/1.2.8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36");
+        settings.setUserAgentString("Mozilla/5.0 (Linux; Android 14; Mobile; UniversalDownloader/1.2.9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36");
 
         // Bind Native Android Bridge
         webView.addJavascriptInterface(new AndroidNativeBridge(), "NativeAndroid");
@@ -204,7 +206,7 @@ public class MainActivity extends AppCompatActivity {
                 android.content.pm.PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
                 return "v" + pInfo.versionName;
             } catch (Exception e) {
-                return "v1.2.8";
+                return "v1.2.9";
             }
         }
 
@@ -284,7 +286,16 @@ public class MainActivity extends AppCompatActivity {
                             break;
                         }
 
-                        // 3. Douyin Direct Resolution
+                        // 3. Instagram Direct GraphQL Resolution (Doc ID 10015901848480474 Engine)
+                        if (currentUrl.contains("instagram.com") || currentUrl.contains("instagr.am")) {
+                            JSONObject res = resolveInstagramDirect(currentUrl, reqMode);
+                            if (res != null) {
+                                notifyMediaResolved(callbackId, res);
+                                return;
+                            }
+                        }
+
+                        // 4. Douyin Direct Resolution
                         if (currentUrl.contains("douyin.com")) {
                             JSONObject res = resolveDouyinDirect(currentUrl, reqMode);
                             if (res != null) {
@@ -293,7 +304,7 @@ public class MainActivity extends AppCompatActivity {
                             }
                         }
 
-                        // 4. Generic Tube & Adult Portals (Pornhub, Xvideos, SpankBang, etc.)
+                        // 5. Generic Tube & Adult Portals (Pornhub, Xvideos, SpankBang, etc.)
                         if (currentUrl.contains("pornhub.com") || currentUrl.contains("xvideos.com") || currentUrl.contains("spankbang.com") || currentUrl.contains("redtube.com")) {
                             JSONObject res = resolveTubeDirect(currentUrl, reqMode);
                             if (res != null) {
@@ -306,10 +317,77 @@ public class MainActivity extends AppCompatActivity {
                         e.printStackTrace();
                     }
 
-                    // 5. Universal Sandboxed Headless Chromium Stream Sniffer (Supports X/Twitter, Instagram, Tube & arbitrary web pages)
+                    // 6. Universal Sandboxed Active Chromium Stream Sniffer (Supports X/Twitter, Tube & arbitrary web pages)
                     resolveWithChromiumSniffer(rawInput, callbackId, reqMode);
                 }
             }).start();
+        }
+
+        private JSONObject resolveInstagramDirect(String currentUrl, String reqMode) {
+            try {
+                String shortcode = "";
+                Matcher scMat = Pattern.compile("(?:reel|p|reels)/([A-Za-z0-9_-]+)").matcher(currentUrl);
+                if (scMat.find()) {
+                    shortcode = scMat.group(1);
+                }
+                if (shortcode.isEmpty()) return null;
+
+                String gqlUrl = "https://www.instagram.com/graphql/query/?doc_id=10015901848480474&variables=%7B%22shortcode%22%3A%22" + shortcode + "%22%7D";
+                HttpURLConnection igConn = (HttpURLConnection) new URL(gqlUrl).openConnection();
+                igConn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
+                igConn.setRequestProperty("X-IG-App-ID", "936619743392459");
+                igConn.setRequestProperty("Accept", "*/*");
+                igConn.setConnectTimeout(8000);
+                igConn.setReadTimeout(8000);
+
+                if (igConn.getResponseCode() == 200) {
+                    BufferedReader igReader = new BufferedReader(new InputStreamReader(igConn.getInputStream()));
+                    StringBuilder igJsonStr = new StringBuilder();
+                    String line;
+                    while ((line = igReader.readLine()) != null) {
+                        igJsonStr.append(line);
+                    }
+                    igReader.close();
+                    igConn.disconnect();
+
+                    JSONObject json = new JSONObject(igJsonStr.toString());
+                    JSONObject data = json.optJSONObject("data");
+                    if (data != null) {
+                        JSONObject media = data.optJSONObject("xdt_shortcode_media");
+                        if (media == null) media = data.optJSONObject("shortcode_media");
+                        if (media != null) {
+                            String videoUrl = media.optString("video_url");
+                            String coverUrl = media.optString("display_url");
+                            String title = "Instagram 极清视频";
+                            JSONObject edgeCaption = media.optJSONObject("edge_media_to_caption");
+                            if (edgeCaption != null) {
+                                JSONArray edges = edgeCaption.optJSONArray("edges");
+                                if (edges != null && edges.length() > 0) {
+                                    JSONObject firstEdge = edges.getJSONObject(0).optJSONObject("node");
+                                    if (firstEdge != null) {
+                                        String capText = firstEdge.optString("text");
+                                        if (capText != null && !capText.trim().isEmpty()) {
+                                            title = capText.trim().replaceAll("[\\r\\n]+", " ");
+                                            if (title.length() > 60) title = title.substring(0, 60) + "...";
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (!videoUrl.isEmpty()) {
+                                JSONObject result = new JSONObject();
+                                result.put("platform", "instagram");
+                                result.put("title", title);
+                                result.put("cover", coverUrl);
+                                result.put("downloadUrl", videoUrl);
+                                result.put("category", reqMode.equals("audio") ? "audio" : "video");
+                                return result;
+                            }
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
+            return null;
         }
 
         private JSONObject resolveTubeDirect(String currentUrl, String reqMode) {
@@ -510,6 +588,14 @@ public class MainActivity extends AppCompatActivity {
 
                         final String platformTag = detectedPlat;
                         final WebView extractorView = new WebView(MainActivity.this);
+
+                        // Attach to layout so Blink initializes and executes JavaScript without throttling
+                        if (rootContainer != null) {
+                            FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(360, 640);
+                            lp.leftMargin = -2000; // Place outside viewport so it doesn't obstruct UI
+                            rootContainer.addView(extractorView, lp);
+                        }
+
                         WebSettings es = extractorView.getSettings();
                         es.setJavaScriptEnabled(true);
                         es.setDomStorageEnabled(true);
@@ -529,6 +615,7 @@ public class MainActivity extends AppCompatActivity {
                                 if (resolved[0]) return;
                                 resolved[0] = true;
                                 try {
+                                    if (rootContainer != null) rootContainer.removeView(extractorView);
                                     extractorView.stopLoading();
                                     extractorView.destroy();
                                 } catch (Exception ignored) {}

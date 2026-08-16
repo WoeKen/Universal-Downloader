@@ -194,27 +194,33 @@ const MobileParsers = {
       } catch (e) {}
     }
 
-    // 2. Direct Embed Stream Extraction Fallback
+    // 2. Direct GraphQL Doc ID Resolution Fallback
     try {
       const shortcodeMatch = url.match(/(?:reel|p|reels)\/([A-Za-z0-9_-]+)/i);
       const shortcode = shortcodeMatch ? shortcodeMatch[1] : '';
       if (shortcode) {
-        const embedUrl = `https://www.instagram.com/reel/${shortcode}/embed/`;
-        const resp = await fetch(embedUrl, {
-          headers: { 'Accept-Language': 'en-US,en;q=0.9' }
+        const gqlUrl = `https://www.instagram.com/graphql/query/?doc_id=10015901848480474&variables=${encodeURIComponent(JSON.stringify({ shortcode }))}`;
+        const resp = await fetch(gqlUrl, {
+          headers: {
+            'X-IG-App-ID': '936619743392459',
+            'Accept': '*/*'
+          }
         });
         if (resp.ok) {
-          const html = await resp.text();
-          const vMatch = html.match(/video_url\\*"\\s*:\\s*\\*"(https:[^"\\]+?)\\*"/i) || html.match(/"video_url":"([^"]+)"/i) || html.match(/(https:[^"'<>\\]+?cdninstagram\.com[^"'<>\\]+?\.mp4[^"'<>\\]*)/i);
-          if (vMatch) {
-            const rawUrl = vMatch[1].replace(/\\\//g, '/').replace(/\\u0026/g, '&').replace(/\\u0025/g, '%').replace(/\\/g, '');
-            const cMatch = html.match(/display_url\\*"\\s*:\\s*\\*"(https:[^"\\]+?)\\*"/i);
-            const rawCover = cMatch ? cMatch[1].replace(/\\\//g, '/').replace(/\\u0026/g, '&').replace(/\\/g, '') : '';
+          const json = await resp.json();
+          const media = json.data?.xdt_shortcode_media || json.data?.shortcode_media;
+          if (media && media.video_url) {
+            let title = isAudioMode ? 'Instagram 无损音频原声' : 'Instagram 极清视频';
+            const capText = media.edge_media_to_caption?.edges?.[0]?.node?.text;
+            if (capText && capText.trim()) {
+              title = capText.trim().replace(/[\r\n]+/g, ' ');
+              if (title.length > 50) title = title.substring(0, 50) + '...';
+            }
             return {
               platform: 'instagram',
-              title: isAudioMode ? 'Instagram 无损音频原声' : 'Instagram 极清视频',
-              cover: rawCover || this.createSvgCover(isAudioMode ? 'Instagram MP3' : 'Instagram HD'),
-              downloadUrl: rawUrl,
+              title: title,
+              cover: media.display_url || this.createSvgCover(isAudioMode ? 'Instagram MP3' : 'Instagram HD'),
+              downloadUrl: media.video_url,
               category: isAudioMode ? 'audio' : 'video',
               extension: isAudioMode ? 'mp3' : 'mp4'
             };
