@@ -110,6 +110,29 @@ jobs:
           name: android-apk
           path: release-assets
 
+      - name: Delete Old Release If Exists For Clean Release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              const tag = context.ref.replace('refs/tags/', '');
+              const release = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag: tag
+              });
+              if (release && release.data) {
+                console.log(`Deleting existing release ${release.data.id} (${tag}) to purge redundant assets`);
+                await github.rest.repos.deleteRelease({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  release_id: release.data.id
+                });
+              }
+            } catch (e) {
+              console.log('No prior release to purge:', e.message);
+            }
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
