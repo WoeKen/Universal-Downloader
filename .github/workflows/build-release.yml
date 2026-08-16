@@ -84,14 +84,14 @@ jobs:
       - name: Prepare APK Output
         run: |
           mkdir -p dist/clean-android
-          find android/app/build/outputs/apk -name "*.apk" -exec cp {} dist/clean-android/Universal-Downloader-v1.2.7-Android.apk \;
+          find android/app/build/outputs/apk -name "*.apk" -exec cp {} dist/clean-android/Universal-Downloader-v1.2.8-Android.apk \;
           ls -la dist/clean-android/
 
       - name: Upload Android Artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
-          path: dist/clean-android/Universal-Downloader-v1.2.7-Android.apk
+          path: dist/clean-android/Universal-Downloader-v1.2.8-Android.apk
 
   publish-release:
     needs: [build-windows, build-android]
@@ -136,12 +136,12 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "🚀 Universal Downloader v1.2.7 (Windows & Android 旗舰双端发布)"
+          name: "🚀 Universal Downloader v1.2.8 (Windows & Android 旗舰双端发布)"
           body_path: RELEASE_NOTES.md
           files: |
-            release-assets/Universal-Downloader-Setup-1.2.7.exe
-            release-assets/Universal-Downloader-v1.2.7-Windows-Portable.zip
-            release-assets/Universal-Downloader-v1.2.7-Android.apk
+            release-assets/Universal-Downloader-Setup-1.2.8.exe
+            release-assets/Universal-Downloader-v1.2.8-Windows-Portable.zip
+            release-assets/Universal-Downloader-v1.2.8-Android.apk
           draft: false
           prerelease: false
           generate_release_notes: false

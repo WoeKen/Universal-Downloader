@@ -20,6 +20,7 @@ import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -73,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
         settings.setDisplayZoomControls(false);
 
         // High compatibility modern Android User Agent
-        settings.setUserAgentString("Mozilla/5.0 (Linux; Android 14; Mobile; UniversalDownloader/1.2.7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36");
+        settings.setUserAgentString("Mozilla/5.0 (Linux; Android 14; Mobile; UniversalDownloader/1.2.8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36");
 
         // Bind Native Android Bridge
         webView.addJavascriptInterface(new AndroidNativeBridge(), "NativeAndroid");
@@ -203,7 +204,7 @@ public class MainActivity extends AppCompatActivity {
                 android.content.pm.PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
                 return "v" + pInfo.versionName;
             } catch (Exception e) {
-                return "v1.2.7";
+                return "v1.2.8";
             }
         }
 
@@ -283,36 +284,18 @@ public class MainActivity extends AppCompatActivity {
                             break;
                         }
 
-                        // 3. Instagram Direct Video Resolution
-                        if (currentUrl.contains("instagram.com") || currentUrl.contains("instagr.am")) {
-                            JSONObject res = resolveInstagramDirect(currentUrl, reqMode);
-                            if (res != null) {
-                                notifyMediaResolved(callbackId, res);
-                                return;
-                            }
-                        }
-
-                        // 4. Twitter / X Direct Video Resolution
-                        if (currentUrl.contains("twitter.com") || currentUrl.contains("x.com")) {
-                            JSONObject res = resolveTwitterDirect(currentUrl, reqMode);
-                            if (res != null) {
-                                notifyMediaResolved(callbackId, res);
-                                return;
-                            }
-                        }
-
-                        // 5. Generic Tube & Adult Portals (Pornhub, Xvideos, etc.)
-                        if (currentUrl.contains("pornhub.com") || currentUrl.contains("xvideos.com") || currentUrl.contains("spankbang.com") || currentUrl.contains("redtube.com")) {
-                            JSONObject res = resolveTubeDirect(currentUrl, reqMode);
-                            if (res != null) {
-                                notifyMediaResolved(callbackId, res);
-                                return;
-                            }
-                        }
-
-                        // 6. Douyin Direct Resolution
+                        // 3. Douyin Direct Resolution
                         if (currentUrl.contains("douyin.com")) {
                             JSONObject res = resolveDouyinDirect(currentUrl, reqMode);
+                            if (res != null) {
+                                notifyMediaResolved(callbackId, res);
+                                return;
+                            }
+                        }
+
+                        // 4. Generic Tube & Adult Portals (Pornhub, Xvideos, SpankBang, etc.)
+                        if (currentUrl.contains("pornhub.com") || currentUrl.contains("xvideos.com") || currentUrl.contains("spankbang.com") || currentUrl.contains("redtube.com")) {
+                            JSONObject res = resolveTubeDirect(currentUrl, reqMode);
                             if (res != null) {
                                 notifyMediaResolved(callbackId, res);
                                 return;
@@ -323,130 +306,10 @@ public class MainActivity extends AppCompatActivity {
                         e.printStackTrace();
                     }
 
-                    // 7. Universal Fallback: Headless Chromium Stream Sniffer
+                    // 5. Universal Sandboxed Headless Chromium Stream Sniffer (Supports X/Twitter, Instagram, Tube & arbitrary web pages)
                     resolveWithChromiumSniffer(rawInput, callbackId, reqMode);
                 }
             }).start();
-        }
-
-        private JSONObject resolveInstagramDirect(String currentUrl, String reqMode) {
-            try {
-                String shortcode = "";
-                Matcher scMat = Pattern.compile("(?:reel|p|reels)/([A-Za-z0-9_-]+)").matcher(currentUrl);
-                if (scMat.find()) {
-                    shortcode = scMat.group(1);
-                }
-                if (shortcode.isEmpty()) return null;
-
-                String embedUrl = "https://www.instagram.com/reel/" + shortcode + "/embed/captioned/";
-                HttpURLConnection igConn = (HttpURLConnection) new URL(embedUrl).openConnection();
-                igConn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
-                igConn.setRequestProperty("Accept-Language", "en-US,en;q=0.9");
-                igConn.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
-                igConn.setConnectTimeout(8000);
-                igConn.setReadTimeout(8000);
-
-                BufferedReader igReader = new BufferedReader(new InputStreamReader(igConn.getInputStream()));
-                StringBuilder igHtml = new StringBuilder();
-                String line;
-                while ((line = igReader.readLine()) != null) {
-                    igHtml.append(line);
-                }
-                igReader.close();
-                igConn.disconnect();
-                String html = igHtml.toString();
-
-                String igVideo = "";
-                Matcher vMat = Pattern.compile("video_url[\"']?\\s*:\\s*[\"']?(https:[^\"'\\\\\\s]+)").matcher(html);
-                if (vMat.find()) {
-                    igVideo = vMat.group(1).replace("\\/", "/").replace("\\u0026", "&").replace("\\u0025", "%").replace("\\", "");
-                } else {
-                    Matcher vMat2 = Pattern.compile("<meta\\s+(?:property|name)=[\"'](?:og:video|og:video:secure_url)[\"']\\s+content=[\"']([^\"']+)[\"']").matcher(html);
-                    if (vMat2.find()) igVideo = vMat2.group(1).replace("&amp;", "&");
-                }
-
-                String igCover = "";
-                Matcher cMat = Pattern.compile("display_url[\"']?\\s*:\\s*[\"']?(https:[^\"'\\\\\\s]+)").matcher(html);
-                if (cMat.find()) {
-                    igCover = cMat.group(1).replace("\\/", "/").replace("\\u0026", "&").replace("\\u0025", "%").replace("\\", "");
-                } else {
-                    Matcher cMat2 = Pattern.compile("<meta\\s+(?:property|name)=[\"']og:image[\"']\\s+content=[\"']([^\"']+)[\"']").matcher(html);
-                    if (cMat2.find()) igCover = cMat2.group(1).replace("&amp;", "&");
-                }
-
-                String igTitle = "Instagram 极清视频";
-                Matcher tMat = Pattern.compile("<div class=\"Caption\">.*?<span class=\"CaptionUsername\">.*?</span>(.*?)</div>").matcher(html);
-                if (tMat.find()) {
-                    String cleanCaption = tMat.group(1).replaceAll("<[^>]+>", "").trim();
-                    if (!cleanCaption.isEmpty()) {
-                        igTitle = cleanCaption.length() > 50 ? cleanCaption.substring(0, 50) + "..." : cleanCaption;
-                    }
-                }
-
-                if (!igVideo.isEmpty()) {
-                    JSONObject result = new JSONObject();
-                    result.put("platform", "instagram");
-                    result.put("title", igTitle);
-                    result.put("cover", igCover);
-                    result.put("downloadUrl", igVideo);
-                    result.put("category", reqMode.equals("audio") ? "audio" : "video");
-                    return result;
-                }
-            } catch (Exception ignored) {}
-            return null;
-        }
-
-        private JSONObject resolveTwitterDirect(String currentUrl, String reqMode) {
-            try {
-                String tweetId = "";
-                Matcher tMatcher = Pattern.compile("status/(\\d+)").matcher(currentUrl);
-                if (tMatcher.find()) {
-                    tweetId = tMatcher.group(1);
-                }
-                if (tweetId.isEmpty()) return null;
-
-                String twApi = "https://api.vxtwitter.com/Twitter/status/" + tweetId;
-                HttpURLConnection twConn = (HttpURLConnection) new URL(twApi).openConnection();
-                twConn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
-                twConn.setConnectTimeout(6000);
-                twConn.setReadTimeout(6000);
-
-                BufferedReader twReader = new BufferedReader(new InputStreamReader(twConn.getInputStream()));
-                StringBuilder twHtml = new StringBuilder();
-                String line;
-                while ((line = twReader.readLine()) != null) {
-                    twHtml.append(line);
-                }
-                twReader.close();
-                twConn.disconnect();
-                String html = twHtml.toString();
-
-                String twVideo = "";
-                Matcher vMat = Pattern.compile("<meta\\s+(?:property|name)=[\"'](?:og:video|og:video:secure_url|twitter:player:stream)[\"']\\s+content=[\"']([^\"']+)[\"']").matcher(html);
-                if (vMat.find()) twVideo = vMat.group(1).replace("&amp;", "&");
-
-                String twCover = "";
-                Matcher cMat = Pattern.compile("<meta\\s+(?:property|name)=[\"']og:image[\"']\\s+content=[\"']([^\"']+)[\"']").matcher(html);
-                if (cMat.find()) twCover = cMat.group(1).replace("&amp;", "&");
-
-                String twTitle = "X / Twitter 极清视频";
-                Matcher tMat = Pattern.compile("<meta\\s+(?:property|name)=[\"'](?:og:description|og:title)[\"']\\s+content=[\"']([^\"']+)[\"']").matcher(html);
-                if (tMat.find()) {
-                    String clean = tMat.group(1).replace("&amp;", "&").replaceAll("<[^>]+>", "").trim();
-                    if (!clean.isEmpty()) twTitle = clean.length() > 60 ? clean.substring(0, 60) + "..." : clean;
-                }
-
-                if (!twVideo.isEmpty()) {
-                    JSONObject result = new JSONObject();
-                    result.put("platform", "twitter");
-                    result.put("title", twTitle);
-                    result.put("cover", twCover);
-                    result.put("downloadUrl", twVideo);
-                    result.put("category", reqMode.equals("audio") ? "audio" : "video");
-                    return result;
-                }
-            } catch (Exception ignored) {}
-            return null;
         }
 
         private JSONObject resolveTubeDirect(String currentUrl, String reqMode) {
@@ -617,20 +480,40 @@ public class MainActivity extends AppCompatActivity {
                         final String cleanUrl = urlMatcher.find() ? urlMatcher.group(1).replaceAll("[\\u4e00-\\u9fa5)\\]}>,;。，！？、“”‘’]+$", "") : rawInput.trim();
 
                         String detectedPlat = "web_video";
-                        if (cleanUrl.contains("douyin.com")) detectedPlat = "douyin";
-                        else if (cleanUrl.contains("tiktok.com")) detectedPlat = "tiktok";
-                        else if (cleanUrl.contains("instagram.com") || cleanUrl.contains("instagr.am")) detectedPlat = "instagram";
-                        else if (cleanUrl.contains("twitter.com") || cleanUrl.contains("x.com")) detectedPlat = "twitter";
-                        else if (cleanUrl.contains("pornhub.com") || cleanUrl.contains("xvideos.com") || cleanUrl.contains("spankbang.com")) detectedPlat = "tube";
-                        else if (cleanUrl.contains("bilibili.com")) detectedPlat = "bilibili";
-                        else if (cleanUrl.contains("kuaishou.com")) detectedPlat = "kuaishou";
-                        else if (cleanUrl.contains("xiaohongshu.com")) detectedPlat = "xiaohongshu";
-                        final String platformTag = detectedPlat;
+                        String targetLoadUrl = cleanUrl;
 
+                        if (cleanUrl.contains("twitter.com") || cleanUrl.contains("x.com")) {
+                            detectedPlat = "twitter";
+                            Matcher tMatcher = Pattern.compile("status/(\\d+)").matcher(cleanUrl);
+                            if (tMatcher.find()) {
+                                targetLoadUrl = "https://platform.twitter.com/embed/Tweet.html?id=" + tMatcher.group(1);
+                            }
+                        } else if (cleanUrl.contains("instagram.com") || cleanUrl.contains("instagr.am")) {
+                            detectedPlat = "instagram";
+                            Matcher scMat = Pattern.compile("(?:reel|p|reels)/([A-Za-z0-9_-]+)").matcher(cleanUrl);
+                            if (scMat.find()) {
+                                targetLoadUrl = "https://www.instagram.com/reel/" + scMat.group(1) + "/embed/";
+                            }
+                        } else if (cleanUrl.contains("douyin.com")) {
+                            detectedPlat = "douyin";
+                        } else if (cleanUrl.contains("tiktok.com")) {
+                            detectedPlat = "tiktok";
+                        } else if (cleanUrl.contains("pornhub.com") || cleanUrl.contains("xvideos.com") || cleanUrl.contains("spankbang.com")) {
+                            detectedPlat = "tube";
+                        } else if (cleanUrl.contains("bilibili.com")) {
+                            detectedPlat = "bilibili";
+                        } else if (cleanUrl.contains("kuaishou.com")) {
+                            detectedPlat = "kuaishou";
+                        } else if (cleanUrl.contains("xiaohongshu.com")) {
+                            detectedPlat = "xiaohongshu";
+                        }
+
+                        final String platformTag = detectedPlat;
                         final WebView extractorView = new WebView(MainActivity.this);
                         WebSettings es = extractorView.getSettings();
                         es.setJavaScriptEnabled(true);
                         es.setDomStorageEnabled(true);
+                        es.setDatabaseEnabled(true);
                         es.setMediaPlaybackRequiresUserGesture(false);
                         es.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
                         es.setUserAgentString("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
@@ -678,7 +561,7 @@ public class MainActivity extends AppCompatActivity {
                             }
                         };
 
-                        extractorView.postDelayed(finishCallback, 8000);
+                        extractorView.postDelayed(finishCallback, 9000);
 
                         extractorView.setWebViewClient(new WebViewClient() {
                             @Override
@@ -688,12 +571,13 @@ public class MainActivity extends AppCompatActivity {
                                     String lower = reqUrl.toLowerCase();
                                     boolean isMediaStream = lower.contains(".mp4") || lower.contains(".m3u8") || lower.contains(".m4v") ||
                                         lower.contains(".webm") || lower.contains(".flv") || lower.contains("mime_type=video") ||
-                                        lower.contains("video/mp4") || lower.contains("phncdn.com") || lower.contains("twimg.com") ||
-                                        lower.contains("cdninstagram.com") || lower.contains("douyinvod.com") || lower.contains("kspkg.com");
+                                        lower.contains("video/mp4") || lower.contains("video.twimg.com") || lower.contains("phncdn.com") ||
+                                        lower.contains("cdninstagram.com") || lower.contains("fbcdn.net") || lower.contains("douyinvod.com") ||
+                                        lower.contains("kspkg.com") || lower.contains("googlevideo.com/videoplayback");
 
-                                    if (isMediaStream && !lower.contains(".jpg") && !lower.contains(".png") && !lower.contains(".webp") && !lower.contains(".gif")) {
+                                    if (isMediaStream && !lower.contains(".jpg") && !lower.contains(".png") && !lower.contains(".webp") && !lower.contains(".gif") && !lower.contains(".css") && !lower.contains(".js")) {
                                         capturedVideoUrl[0] = reqUrl.replace("playwm", "play");
-                                        extractorView.postDelayed(finishCallback, 400);
+                                        extractorView.postDelayed(finishCallback, 300);
                                     }
                                 }
                                 return super.shouldInterceptRequest(view, request);
@@ -702,8 +586,15 @@ public class MainActivity extends AppCompatActivity {
                             @Override
                             public void onPageFinished(WebView view, String url) {
                                 super.onPageFinished(view, url);
+                                // Trigger video auto-play & inspect DOM
                                 view.evaluateJavascript(
                                     "(function() {" +
+                                    "  try {" +
+                                    "    var vids = document.querySelectorAll('video');" +
+                                    "    for (var i = 0; i < vids.length; i++) { vids[i].muted = true; vids[i].play().catch(function(){}); }" +
+                                    "    var btns = document.querySelectorAll('button[aria-label*=\"Play\"], .PlayButton, .videoSpritePlayButton, [data-testid=\"playButton\"]');" +
+                                    "    for (var j = 0; j < btns.length; j++) { btns[j].click(); }" +
+                                    "  } catch(e) {}" +
                                     "  var v = document.querySelector('video') || document.querySelector('video source');" +
                                     "  var src = v ? (v.currentSrc || v.src) : '';" +
                                     "  var poster = v ? (v.poster || '') : '';" +
@@ -745,7 +636,7 @@ public class MainActivity extends AppCompatActivity {
                             }
                         });
 
-                        extractorView.loadUrl(cleanUrl);
+                        extractorView.loadUrl(targetLoadUrl);
                     } catch (Exception e) {
                         e.printStackTrace();
                         notifyMediaResolved(callbackId, null);
@@ -790,6 +681,7 @@ public class MainActivity extends AppCompatActivity {
                 public void run() {
                     InputStream in = null;
                     FileOutputStream out = null;
+                    File targetFile = null;
                     try {
                         String cleanTitle = (rawTitle != null && !rawTitle.trim().isEmpty())
                                 ? rawTitle.replaceAll("[\\\\/:*?\"<>|]", "_").trim()
@@ -801,23 +693,52 @@ public class MainActivity extends AppCompatActivity {
                         if (!downloadDir.exists()) downloadDir.mkdirs();
 
                         String defaultExt = isVideo ? ".mp4" : ".mp3";
-                        File targetFile = new File(downloadDir, cleanTitle + defaultExt);
+                        targetFile = new File(downloadDir, cleanTitle + defaultExt);
                         int count = 1;
                         while (targetFile.exists()) {
                             targetFile = new File(downloadDir, cleanTitle + "_" + count + defaultExt);
                             count++;
                         }
 
-                        HttpURLConnection conn = (HttpURLConnection) new URL(downloadUrl).openConnection();
-                        conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
-                        conn.setRequestProperty("Referer", downloadUrl);
-                        conn.setConnectTimeout(15000);
-                        conn.setReadTimeout(15000);
-                        conn.connect();
+                        // 1. Follow redirects up to 8 hops
+                        HttpURLConnection conn = null;
+                        String currentFetchUrl = downloadUrl;
+                        int hops = 0;
+                        int respCode = 0;
 
-                        int respCode = conn.getResponseCode();
+                        while (hops < 8) {
+                            conn = (HttpURLConnection) new URL(currentFetchUrl).openConnection();
+                            conn.setInstanceFollowRedirects(false);
+                            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
+                            conn.setRequestProperty("Accept", "*/*");
+                            conn.setConnectTimeout(15000);
+                            conn.setReadTimeout(15000);
+                            conn.connect();
+
+                            respCode = conn.getResponseCode();
+                            if (respCode == 301 || respCode == 302 || respCode == 303 || respCode == 307 || respCode == 308) {
+                                String loc = conn.getHeaderField("Location");
+                                conn.disconnect();
+                                if (loc != null && !loc.isEmpty()) {
+                                    currentFetchUrl = loc;
+                                    hops++;
+                                    continue;
+                                }
+                            }
+                            break;
+                        }
+
                         if (respCode >= 400) {
-                            throw new Exception("HTTP Server returned code: " + respCode);
+                            throw new Exception("媒体服务器响应错误: HTTP " + respCode);
+                        }
+
+                        // 2. Validate Content-Type: Block HTML or plain text error pages from being saved as MP4/MP3
+                        String contentType = conn.getContentType();
+                        if (contentType != null) {
+                            String lowerType = contentType.toLowerCase();
+                            if (lowerType.contains("text/html") || lowerType.contains("text/plain")) {
+                                throw new Exception("解析结果返回了防盗链网页数据，非真实多媒体文件");
+                            }
                         }
 
                         long totalLength = conn.getContentLength();
@@ -855,23 +776,44 @@ public class MainActivity extends AppCompatActivity {
                             }
                         }
                         out.flush();
+                        out.close();
+                        out = null;
+
+                        // 3. Final Content Verification (Strict Anti-Corruption Check)
+                        final long actualFileSize = targetFile.length();
+                        if (actualFileSize < 30 * 1024) {
+                            // Check if file starts with HTML tags
+                            FileInputStream fis = new FileInputStream(targetFile);
+                            byte[] headBytes = new byte[256];
+                            int readHead = fis.read(headBytes);
+                            fis.close();
+                            if (readHead > 0) {
+                                String headStr = new String(headBytes, 0, readHead).toLowerCase();
+                                if (headStr.contains("<!doctype") || headStr.contains("<html") || headStr.contains("<body") || headStr.contains("<script")) {
+                                    targetFile.delete();
+                                    throw new Exception("下载内容为网页鉴权页面，非有效视频流");
+                                }
+                            }
+                        }
 
                         // Scan into Android system media library
                         scanGalleryFile(targetFile.getAbsolutePath(), isVideo);
 
                         final String finalPath = targetFile.getAbsolutePath();
-                        final long actualFileSize = targetFile.length();
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
                                 if (webView != null) {
-                                    webView.evaluateJavascript("window.onNativeDownloadCompleted && window.onNativeDownloadCompleted('" + taskId + "', '" + finalPath.replace("\\", "\\\\").replace("'", "\\'") + "', " + actualFileSize + ");", null);
+                                    webView.evaluateJavascript("window.onNativeDownloadCompleted && window.onNativeDownloadCompleted('" + taskId + "', '" + finalPath.replace("\\", "\\\\").replace("'", "\\'") + "', '" + (isVideo ? "video/mp4" : "audio/mpeg") + "', " + actualFileSize + ");", null);
                                 }
                             }
                         });
 
                     } catch (final Exception e) {
                         e.printStackTrace();
+                        if (targetFile != null && targetFile.exists() && targetFile.length() < 50 * 1024) {
+                            try { targetFile.delete(); } catch (Exception ignored) {}
+                        }
                         final String errorDetail = e.getMessage() != null ? e.getMessage() : "下载发生网络错误";
                         runOnUiThread(new Runnable() {
                             @Override

@@ -336,14 +336,24 @@
   }
 
   // Native Download Listeners from Android Java
-  window.onNativeDownloadProgress = function (taskId, progress, downloaded, size, speed) {
+  window.onNativeDownloadProgress = function (taskId, arg1, arg2, arg3) {
     const t = tasks.find(x => x.id === taskId);
     if (t) {
       t.status = 'downloading';
-      t.progress = progress;
+      let downloaded = 0;
+      let total = 0;
+      if (typeof arg3 !== 'undefined') {
+        // (taskId, progress, downloaded, size)
+        downloaded = Number(arg2) || 0;
+        total = Number(arg3) || 0;
+      } else {
+        // (taskId, downloaded, total)
+        downloaded = Number(arg1) || 0;
+        total = Number(arg2) || 0;
+      }
       t.downloaded = downloaded;
-      t.size = size;
-      t.speed = speed;
+      if (total > 0) t.size = total;
+      t.progress = (t.size > 0) ? Math.min(100, Math.max(0, (downloaded / t.size) * 100)) : (t.progress || 0);
       saveTasks();
       renderTaskList();
     }
@@ -826,7 +836,7 @@
     }
 
     // 8. In-App OTA Update Engine
-    let APP_VERSION = 'v1.2.7';
+    let APP_VERSION = 'v1.2.8';
     if (window.NativeAndroid?.getAppVersion) {
       try {
         const nativeVer = window.NativeAndroid.getAppVersion();

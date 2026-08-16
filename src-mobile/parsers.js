@@ -159,7 +159,7 @@ const MobileParsers = {
       try {
         const nativeResult = await new Promise((resolve) => {
           const callbackId = 'cb_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-          const timer = setTimeout(() => resolve(null), 8500);
+          const timer = setTimeout(() => resolve(null), 9500);
 
           if (!window._nativeMediaCallbacks) window._nativeMediaCallbacks = {};
           window._nativeMediaCallbacks[callbackId] = (dataStr) => {
@@ -181,7 +181,7 @@ const MobileParsers = {
           window.NativeAndroid.resolveNativeMedia(url, callbackId, mode);
         });
 
-        if (nativeResult && nativeResult.downloadUrl && nativeResult.downloadUrl.startsWith('http')) {
+        if (nativeResult && nativeResult.downloadUrl && nativeResult.downloadUrl.startsWith('http') && !nativeResult.downloadUrl.includes('instagram.com/reel/') && !nativeResult.downloadUrl.includes('instagram.com/p/')) {
           return {
             platform: 'instagram',
             title: isAudioMode ? `${nativeResult.title || 'Instagram'} (音频原声)` : (nativeResult.title || 'Instagram 极清视频'),
@@ -199,13 +199,13 @@ const MobileParsers = {
       const shortcodeMatch = url.match(/(?:reel|p|reels)\/([A-Za-z0-9_-]+)/i);
       const shortcode = shortcodeMatch ? shortcodeMatch[1] : '';
       if (shortcode) {
-        const embedUrl = `https://www.instagram.com/reel/${shortcode}/embed/captioned/`;
+        const embedUrl = `https://www.instagram.com/reel/${shortcode}/embed/`;
         const resp = await fetch(embedUrl, {
           headers: { 'Accept-Language': 'en-US,en;q=0.9' }
         });
         if (resp.ok) {
           const html = await resp.text();
-          const vMatch = html.match(/video_url\\*"\\s*:\\s*\\*"(https:[^"\\]+?)\\*"/i) || html.match(/"video_url":"([^"]+)"/i);
+          const vMatch = html.match(/video_url\\*"\\s*:\\s*\\*"(https:[^"\\]+?)\\*"/i) || html.match(/"video_url":"([^"]+)"/i) || html.match(/(https:[^"'<>\\]+?cdninstagram\.com[^"'<>\\]+?\.mp4[^"'<>\\]*)/i);
           if (vMatch) {
             const rawUrl = vMatch[1].replace(/\\\//g, '/').replace(/\\u0026/g, '&').replace(/\\u0025/g, '%').replace(/\\/g, '');
             const cMatch = html.match(/display_url\\*"\\s*:\\s*\\*"(https:[^"\\]+?)\\*"/i);
@@ -223,14 +223,7 @@ const MobileParsers = {
       }
     } catch (err) {}
 
-    return {
-      platform: 'instagram',
-      title: isAudioMode ? 'Instagram 无损音频原声' : 'Instagram 极清视频',
-      cover: this.createSvgCover(isAudioMode ? 'Instagram MP3' : 'Instagram HD'),
-      downloadUrl: url,
-      category: isAudioMode ? 'audio' : 'video',
-      extension: isAudioMode ? 'mp3' : 'mp4'
-    };
+    throw new Error('未嗅探到 Instagram 原始视频媒体流，请检查该帖子是否为公开内容或重试');
   },
 
   // 3. Twitter / X 极清视频解析
@@ -240,7 +233,7 @@ const MobileParsers = {
       try {
         const nativeResult = await new Promise((resolve) => {
           const callbackId = 'cb_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-          const timer = setTimeout(() => resolve(null), 8500);
+          const timer = setTimeout(() => resolve(null), 9500);
 
           if (!window._nativeMediaCallbacks) window._nativeMediaCallbacks = {};
           window._nativeMediaCallbacks[callbackId] = (dataStr) => {
@@ -252,10 +245,17 @@ const MobileParsers = {
             }
           };
 
+          window.onNativeMediaResolved = function (cbId, dataStr) {
+            if (window._nativeMediaCallbacks && window._nativeMediaCallbacks[cbId]) {
+              window._nativeMediaCallbacks[cbId](dataStr);
+              delete window._nativeMediaCallbacks[cbId];
+            }
+          };
+
           window.NativeAndroid.resolveNativeMedia(url, callbackId, mode);
         });
 
-        if (nativeResult && nativeResult.downloadUrl) {
+        if (nativeResult && nativeResult.downloadUrl && nativeResult.downloadUrl.startsWith('http') && !nativeResult.downloadUrl.includes('twitter.com') && !nativeResult.downloadUrl.includes('x.com/')) {
           return {
             platform: 'twitter',
             title: isAudioMode ? `${nativeResult.title || 'X / Twitter'} (音频原声)` : (nativeResult.title || 'X / Twitter 极清视频'),
@@ -268,14 +268,7 @@ const MobileParsers = {
       } catch (e) {}
     }
 
-    return {
-      platform: 'twitter',
-      title: isAudioMode ? 'X / Twitter 无损音频原声' : 'X / Twitter 极清视频',
-      cover: this.createSvgCover(isAudioMode ? 'Twitter MP3' : 'X / Twitter HD'),
-      downloadUrl: url,
-      category: isAudioMode ? 'audio' : 'video',
-      extension: isAudioMode ? 'mp3' : 'mp4'
-    };
+    throw new Error('未嗅探到 X / Twitter 媒体流，请检查推文是否包含视频或公开权限');
   },
 
   // 4. YouTube 高清视频解析
