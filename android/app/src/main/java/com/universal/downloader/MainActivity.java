@@ -294,25 +294,25 @@ public class MainActivity extends AppCompatActivity {
                                     String html = igHtml.toString();
 
                                     String igVideo = "";
-                                    Matcher vMat = Pattern.compile("video_url\\*"\\s*:\\s*\\*"(https:[^"\\\\]+?)\\*"").matcher(html);
+                                    Matcher vMat = Pattern.compile("video_url[\"']?\\s*:\\s*[\"']?(https:[^\"'\\\\\\s]+)").matcher(html);
                                     if (vMat.find()) {
                                         igVideo = vMat.group(1).replace("\\/", "/").replace("\\u0026", "&").replace("\\u0025", "%").replace("\\", "");
                                     } else {
-                                        Matcher vMat2 = Pattern.compile("<meta\\s+(?:property|name)=["'](?:og:video|og:video:secure_url)["']\\s+content=["']([^"']+)["']").matcher(html);
+                                        Matcher vMat2 = Pattern.compile("<meta\\s+(?:property|name)=[\"'](?:og:video|og:video:secure_url)[\"']\\s+content=[\"']([^\"']+)[\"']").matcher(html);
                                         if (vMat2.find()) igVideo = vMat2.group(1).replace("&amp;", "&");
                                     }
 
                                     String igCover = "";
-                                    Matcher cMat = Pattern.compile("display_url\\*"\\s*:\\s*\\*"(https:[^"\\\\]+?)\\*"").matcher(html);
+                                    Matcher cMat = Pattern.compile("display_url[\"']?\\s*:\\s*[\"']?(https:[^\"'\\\\\\s]+)").matcher(html);
                                     if (cMat.find()) {
                                         igCover = cMat.group(1).replace("\\/", "/").replace("\\u0026", "&").replace("\\u0025", "%").replace("\\", "");
                                     } else {
-                                        Matcher cMat2 = Pattern.compile("<meta\\s+(?:property|name)=["']og:image["']\\s+content=["']([^"']+)["']").matcher(html);
+                                        Matcher cMat2 = Pattern.compile("<meta\\s+(?:property|name)=[\"']og:image[\"']\\s+content=[\"']([^\"']+)[\"']").matcher(html);
                                         if (cMat2.find()) igCover = cMat2.group(1).replace("&amp;", "&");
                                     }
 
                                     String igTitle = "Instagram 极清视频";
-                                    Matcher tMat = Pattern.compile("<div class="Caption">.*?<span class="CaptionUsername">.*?</span>(.*?)</div>").matcher(html);
+                                    Matcher tMat = Pattern.compile("<div class=\"Caption\">.*?<span class=\"CaptionUsername\">.*?</span>(.*?)</div>").matcher(html);
                                     if (tMat.find()) {
                                         String cleanCaption = tMat.group(1).replaceAll("<[^>]+>", "").trim();
                                         if (!cleanCaption.isEmpty()) {
@@ -370,15 +370,15 @@ public class MainActivity extends AppCompatActivity {
                                     String html = twHtml.toString();
 
                                     String twVideo = "";
-                                    Matcher vMat = Pattern.compile("<meta\\s+(?:property|name)=["'](?:og:video|og:video:secure_url|twitter:player:stream)["']\\s+content=["']([^"']+)["']").matcher(html);
+                                    Matcher vMat = Pattern.compile("<meta\\s+(?:property|name)=[\"'](?:og:video|og:video:secure_url|twitter:player:stream)[\"']\\s+content=[\"']([^\"']+)[\"']").matcher(html);
                                     if (vMat.find()) twVideo = vMat.group(1).replace("&amp;", "&");
 
                                     String twCover = "";
-                                    Matcher cMat = Pattern.compile("<meta\\s+(?:property|name)=["']og:image["']\\s+content=["']([^"']+)["']").matcher(html);
+                                    Matcher cMat = Pattern.compile("<meta\\s+(?:property|name)=[\"']og:image[\"']\\s+content=[\"']([^\"']+)[\"']").matcher(html);
                                     if (cMat.find()) twCover = cMat.group(1).replace("&amp;", "&");
 
                                     String twTitle = "X / Twitter 极清视频";
-                                    Matcher tMat = Pattern.compile("<meta\\s+(?:property|name)=["'](?:og:description|og:title)["']\\s+content=["']([^"']+)["']").matcher(html);
+                                    Matcher tMat = Pattern.compile("<meta\\s+(?:property|name)=[\"'](?:og:description|og:title)[\"']\\s+content=[\"']([^\"']+)[\"']").matcher(html);
                                     if (tMat.find()) {
                                         String clean = tMat.group(1).replace("&amp;", "&").replaceAll("<[^>]+>", "").trim();
                                         if (!clean.isEmpty()) twTitle = clean.length() > 60 ? clean.substring(0, 60) + "..." : clean;
@@ -427,21 +427,21 @@ public class MainActivity extends AppCompatActivity {
                                 String html = tHtml.toString();
 
                                 String tubeVideo = "";
-                                Matcher vMat = Pattern.compile(""videoUrl"\\s*:\\s*"(https:[^"]+?)"").matcher(html);
+                                Matcher vMat = Pattern.compile("\"videoUrl\"\\s*:\\s*\"(https:[^\"]+?)\"").matcher(html);
                                 while (vMat.find()) {
                                     tubeVideo = vMat.group(1).replace("\\/", "/");
                                 }
                                 if (tubeVideo.isEmpty()) {
-                                    Matcher vMat2 = Pattern.compile("<meta\\s+(?:property|name)=["'](?:og:video|og:video:url|og:video:secure_url)["']\\s+content=["']([^"']+)["']").matcher(html);
+                                    Matcher vMat2 = Pattern.compile("<meta\\s+(?:property|name)=[\"'](?:og:video|og:video:url|og:video:secure_url)[\"']\\s+content=[\"']([^\"']+)[\"']").matcher(html);
                                     if (vMat2.find()) tubeVideo = vMat2.group(1).replace("&amp;", "&");
                                 }
 
                                 String tubeCover = "";
-                                Matcher cMat = Pattern.compile("<meta\\s+(?:property|name)=["']og:image["']\\s+content=["']([^"']+)["']").matcher(html);
+                                Matcher cMat = Pattern.compile("<meta\\s+(?:property|name)=[\"']og:image[\"']\\s+content=[\"']([^\"']+)[\"']").matcher(html);
                                 if (cMat.find()) tubeCover = cMat.group(1).replace("&amp;", "&");
 
                                 String tubeTitle = "高清在线视频";
-                                Matcher titMat = Pattern.compile("<meta\\s+(?:property|name)=["']og:title["']\\s+content=["']([^"']+)["']").matcher(html);
+                                Matcher titMat = Pattern.compile("<meta\\s+(?:property|name)=[\"']og:title[\"']\\s+content=[\"']([^\"']+)[\"']").matcher(html);
                                 if (titMat.find()) {
                                     tubeTitle = titMat.group(1).replace("&amp;", "&").replaceAll("<[^>]+>", "").trim();
                                 }
