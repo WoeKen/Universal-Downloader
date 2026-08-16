@@ -260,7 +260,21 @@
 
     try {
       const parsed = await window.MobileParsers.parseMedia(text, currentFormatMode);
-      const isVideo = parsed.category === 'video' || (currentFormatMode !== 'audio' && parsed.category !== 'audio');
+      
+      let finalCat = parsed.category || 'video';
+      let finalExt = parsed.extension || 'mp4';
+
+      if (currentFormatMode === 'audio') {
+        finalCat = 'audio';
+        finalExt = 'mp3';
+      } else if (currentFormatMode === 'video') {
+        if (finalCat === 'audio' || finalCat === 'file' || !finalCat) {
+          finalCat = 'video';
+          finalExt = 'mp4';
+        }
+      }
+
+      const isVideo = finalCat === 'video';
 
       const newTask = {
         id: 'task_' + Date.now(),
@@ -268,8 +282,9 @@
         title: parsed.title,
         cover: parsed.cover,
         platform: parsed.platform,
-        category: isVideo ? 'video' : 'audio',
-        extension: isVideo ? 'mp4' : 'mp3',
+        category: finalCat,
+        extension: finalExt,
+        mimeType: parsed.mimeType || (finalCat === 'apk' ? 'application/vnd.android.package-archive' : isVideo ? 'video/mp4' : finalCat === 'audio' ? 'audio/mpeg' : '*/*'),
         status: 'downloading',
         progress: 0,
         downloaded: 0,
@@ -282,7 +297,16 @@
       renderTaskList();
       document.getElementById('mobileUrlInput').value = '';
       triggerHaptic('success');
-      showToast(isVideo ? '🚀 极清视频已进入下载队列！' : '🎶 高品质音频已进入下载队列！');
+      
+      const toastTypeMsg = {
+        video: '🎬 极清视频已进入下载队列！',
+        audio: '🎶 高品质音频已进入下载队列！',
+        apk: '📦 应用安装包已进入下载队列！',
+        picture: '🖼️ 高清图片已进入下载队列！',
+        document: '📄 文档已进入下载队列！',
+        archive: '🗜️ 压缩包已进入下载队列！'
+      };
+      showToast(toastTypeMsg[finalCat] || '🚀 任务已进入下载队列！');
 
       // Native Bridge or Internal Downloader
       if (window.NativeAndroid?.startDownload) {
@@ -306,6 +330,18 @@
       t.speed = speed;
       saveTasks();
       renderTaskList();
+    }
+  };
+
+  window.onNativeDownloadFailed = function (taskId, errorMsg) {
+    const t = tasks.find(x => x.id === taskId);
+    if (t) {
+      t.status = 'failed';
+      t.speed = 0;
+      saveTasks();
+      renderTaskList();
+      triggerHaptic('warning');
+      showToast(`⚠️ 下载中断: ${errorMsg || '网络超时'}`);
     }
   };
 
@@ -765,7 +801,7 @@
     }
 
     // 8. In-App OTA Update Engine
-    const APP_VERSION = 'v1.2.1';
+    const APP_VERSION = 'v1.2.2';
     let latestApkUrl = 'https://github.com/WoeKen/Universal-Downloader/releases/latest';
 
     function isRemoteVersionNewer(remote, current) {

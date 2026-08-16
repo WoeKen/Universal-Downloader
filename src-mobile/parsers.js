@@ -151,7 +151,8 @@ const MobileParsers = {
   },
 
   // 2. Instagram 极清视频与Reels解析
-  async parseInstagram(url) {
+  async parseInstagram(url, mode = 'auto') {
+    const isAudioMode = mode === 'audio';
     if (window.NativeAndroid?.resolveNativeMedia) {
       try {
         const nativeResult = await new Promise((resolve) => {
@@ -168,17 +169,17 @@ const MobileParsers = {
             }
           };
 
-          window.NativeAndroid.resolveNativeMedia(url, callbackId);
+          window.NativeAndroid.resolveNativeMedia(url, callbackId, mode);
         });
 
         if (nativeResult && nativeResult.downloadUrl) {
           return {
             platform: 'instagram',
-            title: nativeResult.title || 'Instagram 极清视频',
-            cover: nativeResult.cover || this.createSvgCover('Instagram HD'),
+            title: isAudioMode ? `${nativeResult.title || 'Instagram'} (音频原声)` : (nativeResult.title || 'Instagram 极清视频'),
+            cover: nativeResult.cover || this.createSvgCover(isAudioMode ? 'Instagram MP3' : 'Instagram HD'),
             downloadUrl: nativeResult.downloadUrl,
-            category: 'video',
-            extension: 'mp4'
+            category: isAudioMode ? 'audio' : 'video',
+            extension: isAudioMode ? 'mp3' : 'mp4'
           };
         }
       } catch (e) {}
@@ -186,16 +187,17 @@ const MobileParsers = {
 
     return {
       platform: 'instagram',
-      title: 'Instagram 极清视频',
-      cover: this.createSvgCover('Instagram HD'),
+      title: isAudioMode ? 'Instagram 无损音频原声' : 'Instagram 极清视频',
+      cover: this.createSvgCover(isAudioMode ? 'Instagram MP3' : 'Instagram HD'),
       downloadUrl: url,
-      category: 'video',
-      extension: 'mp4'
+      category: isAudioMode ? 'audio' : 'video',
+      extension: isAudioMode ? 'mp3' : 'mp4'
     };
   },
 
   // 3. Twitter / X 极清视频解析
-  async parseTwitter(url) {
+  async parseTwitter(url, mode = 'auto') {
+    const isAudioMode = mode === 'audio';
     if (window.NativeAndroid?.resolveNativeMedia) {
       try {
         const nativeResult = await new Promise((resolve) => {
@@ -212,17 +214,17 @@ const MobileParsers = {
             }
           };
 
-          window.NativeAndroid.resolveNativeMedia(url, callbackId);
+          window.NativeAndroid.resolveNativeMedia(url, callbackId, mode);
         });
 
         if (nativeResult && nativeResult.downloadUrl) {
           return {
             platform: 'twitter',
-            title: nativeResult.title || 'X / Twitter 极清视频',
-            cover: nativeResult.cover || this.createSvgCover('X / Twitter HD'),
+            title: isAudioMode ? `${nativeResult.title || 'X / Twitter'} (音频原声)` : (nativeResult.title || 'X / Twitter 极清视频'),
+            cover: nativeResult.cover || this.createSvgCover(isAudioMode ? 'Twitter MP3' : 'X / Twitter HD'),
             downloadUrl: nativeResult.downloadUrl,
-            category: 'video',
-            extension: 'mp4'
+            category: isAudioMode ? 'audio' : 'video',
+            extension: isAudioMode ? 'mp3' : 'mp4'
           };
         }
       } catch (e) {}
@@ -230,35 +232,37 @@ const MobileParsers = {
 
     return {
       platform: 'twitter',
-      title: 'X / Twitter 极清视频',
-      cover: this.createSvgCover('X / Twitter HD'),
+      title: isAudioMode ? 'X / Twitter 无损音频原声' : 'X / Twitter 极清视频',
+      cover: this.createSvgCover(isAudioMode ? 'Twitter MP3' : 'X / Twitter HD'),
       downloadUrl: url,
-      category: 'video',
-      extension: 'mp4'
+      category: isAudioMode ? 'audio' : 'video',
+      extension: isAudioMode ? 'mp3' : 'mp4'
     };
   },
 
   // 4. YouTube 高清视频解析
-  async parseYouTube(url) {
+  async parseYouTube(url, mode = 'auto') {
+    const isAudioMode = mode === 'audio';
     const idMatch = url.match(/(?:youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*)/);
     const videoId = (idMatch && idMatch[1].length === 11) ? idMatch[1] : '';
-    const cover = videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : this.createSvgCover('YouTube 4K');
+    const cover = videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : this.createSvgCover(isAudioMode ? 'YouTube MP3' : 'YouTube 4K');
     
     return {
       platform: 'youtube',
-      title: 'YouTube 极清视频',
+      title: isAudioMode ? 'YouTube 无损音频原声' : 'YouTube 极清视频',
       cover: cover,
       downloadUrl: url,
-      category: 'video',
-      extension: 'mp4'
+      category: isAudioMode ? 'audio' : 'video',
+      extension: isAudioMode ? 'mp3' : 'mp4'
     };
   },
 
-  // 3. B站高清解析
-  async parseBilibili(url) {
+  // 5. B站高清解析
+  async parseBilibili(url, mode = 'auto') {
+    const isAudioMode = mode === 'audio';
     const bvMatch = url.match(/(BV[a-zA-Z0-9]{10})/i);
     const bvid = bvMatch ? bvMatch[1] : '';
-    let title = 'Bilibili 高清视频';
+    let title = isAudioMode ? 'Bilibili 纯音频原声' : 'Bilibili 高清视频';
     let cover = '';
     let author = 'Bilibili UP主';
 
@@ -267,7 +271,7 @@ const MobileParsers = {
         const viewRes = await fetch(`https://api.bilibili.com/x/web-interface/view?bvid=${bvid}`);
         const viewData = await viewRes.json();
         if (viewData?.data) {
-          title = viewData.data.title || title;
+          title = (viewData.data.title || title) + (isAudioMode ? ' (音频原声)' : '');
           cover = (viewData.data.pic || '').replace('http:', 'https:');
           author = viewData.data.owner?.name || author;
         }
@@ -278,33 +282,37 @@ const MobileParsers = {
       platform: 'bilibili',
       bvid: bvid,
       title: title,
-      cover: cover,
+      cover: cover || this.createSvgCover(isAudioMode ? 'Bilibili MP3' : 'Bilibili HD'),
       author: author,
       downloadUrl: url,
-      category: 'video',
-      extension: 'mp4'
+      category: isAudioMode ? 'audio' : 'video',
+      extension: isAudioMode ? 'mp3' : 'mp4'
     };
   },
 
-  // 4. 小红书无水印图片/视频解析
-  async parseXiaohongshu(url) {
+  // 6. 小红书无水印图片/视频解析
+  async parseXiaohongshu(url, mode = 'auto') {
+    const isAudioMode = mode === 'audio';
     return {
       platform: 'xiaohongshu',
-      title: '小红书精选笔记',
+      title: isAudioMode ? '小红书笔记原声' : '小红书精选笔记',
+      cover: this.createSvgCover(isAudioMode ? '小红书 MP3' : '小红书精选'),
       downloadUrl: url,
-      category: 'video',
-      extension: 'mp4'
+      category: isAudioMode ? 'audio' : 'video',
+      extension: isAudioMode ? 'mp3' : 'mp4'
     };
   },
 
-  // 5. 快手无水印解析
-  async parseKuaishou(url) {
+  // 7. 快手无水印解析
+  async parseKuaishou(url, mode = 'auto') {
+    const isAudioMode = mode === 'audio';
     return {
       platform: 'kuaishou',
-      title: '快手高清视频',
+      title: isAudioMode ? '快手原声音乐' : '快手高清视频',
+      cover: this.createSvgCover(isAudioMode ? '快手 MP3' : '快手原画'),
       downloadUrl: url,
-      category: 'video',
-      extension: 'mp4'
+      category: isAudioMode ? 'audio' : 'video',
+      extension: isAudioMode ? 'mp3' : 'mp4'
     };
   },
 

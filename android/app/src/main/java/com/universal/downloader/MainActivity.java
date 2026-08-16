@@ -61,15 +61,42 @@ public class MainActivity extends AppCompatActivity {
                                 if (mediaFile.exists() && mediaFile.canRead()) {
                                     String mime = "video/mp4";
                                     String lower = mediaFile.getName().toLowerCase();
-                                    if (lower.endsWith(".mp3") || lower.endsWith(".m4a") || lower.endsWith(".wav") || lower.endsWith(".ogg") || lower.endsWith(".flac")) {
+                                    if (lower.endsWith(".mp3") || lower.endsWith(".m4a") || lower.endsWith(".wav") || lower.endsWith(".ogg") || lower.endsWith(".flac") || lower.endsWith(".aac")) {
                                         mime = "audio/mpeg";
-                                    } else if (lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png") || lower.endsWith(".webp") || lower.endsWith(".gif")) {
+                                    } else if (lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png") || lower.endsWith(".webp") || lower.endsWith(".gif") || lower.endsWith(".svg")) {
                                         mime = "image/jpeg";
+                                    } else if (lower.endsWith(".webm") || lower.endsWith(".mkv")) {
+                                        mime = "video/webm";
                                     }
+
+                                    long fileLength = mediaFile.length();
+                                    java.io.InputStream is = new java.io.FileInputStream(mediaFile);
+                                    int statusCode = 200;
+                                    String statusMsg = "OK";
                                     java.util.Map<String, String> responseHeaders = new java.util.HashMap<>();
                                     responseHeaders.put("Access-Control-Allow-Origin", "*");
                                     responseHeaders.put("Accept-Ranges", "bytes");
-                                    return new android.webkit.WebResourceResponse(mime, "UTF-8", 200, "OK", responseHeaders, new java.io.FileInputStream(mediaFile));
+
+                                    // Handle Range header for instant seeking
+                                    String rangeHeader = request.getRequestHeaders() != null ? request.getRequestHeaders().get("Range") : null;
+                                    if (rangeHeader != null && rangeHeader.startsWith("bytes=")) {
+                                        try {
+                                            String[] parts = rangeHeader.substring(6).split("-");
+                                            long start = Long.parseLong(parts[0]);
+                                            long end = parts.length > 1 && !parts[1].isEmpty() ? Long.parseLong(parts[1]) : fileLength - 1;
+                                            if (start < fileLength) {
+                                                is.skip(start);
+                                                statusCode = 206;
+                                                statusMsg = "Partial Content";
+                                                responseHeaders.put("Content-Range", "bytes " + start + "-" + end + "/" + fileLength);
+                                                responseHeaders.put("Content-Length", String.valueOf(end - start + 1));
+                                            }
+                                        } catch (Exception ignored) {}
+                                    } else {
+                                        responseHeaders.put("Content-Length", String.valueOf(fileLength));
+                                    }
+
+                                    return new android.webkit.WebResourceResponse(mime, "UTF-8", statusCode, statusMsg, responseHeaders, is);
                                 }
                             } catch (Exception e) {
                                 e.printStackTrace();
@@ -687,6 +714,16 @@ public class MainActivity extends AppCompatActivity {
                             if (out != null) out.close();
                             if (in != null) in.close();
                         } catch (Exception ex) {}
+
+                        final String errorDetail = (e.getMessage() != null && !e.getMessage().isEmpty()) ? e.getMessage() : "下载连接超时或网络异常";
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                if (webView != null) {
+                                    webView.evaluateJavascript("window.onNativeDownloadFailed && window.onNativeDownloadFailed('" + taskId + "', '" + errorDetail.replace("'", "\\'").replace("\n", " ") + "');", null);
+                                }
+                            }
+                        });
                     }
                 }
             }).start();
