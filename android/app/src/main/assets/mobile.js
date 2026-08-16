@@ -826,7 +826,7 @@
     }
 
     // 8. In-App OTA Update Engine
-    let APP_VERSION = 'v1.2.4';
+    let APP_VERSION = 'v1.2.5';
     if (window.NativeAndroid?.getAppVersion) {
       try {
         const nativeVer = window.NativeAndroid.getAppVersion();
@@ -873,8 +873,13 @@
           if (currentVerEl) currentVerEl.textContent = APP_VERSION;
           document.getElementById('latestVerText').textContent = remoteTag;
           document.getElementById('updateChangelogContent').textContent = data.body || '包含多项功能升级与稳定性优化。';
-          const apkAsset = data.assets?.find(a => a.name.endsWith('.apk'));
-          if (apkAsset) latestApkUrl = apkAsset.browser_download_url;
+          const apkAsset = data.assets?.find(a => a.name && a.name.endsWith('.apk'));
+          if (apkAsset && apkAsset.browser_download_url) {
+            latestApkUrl = apkAsset.browser_download_url;
+          } else {
+            const cleanTag = remoteTag.startsWith('v') ? remoteTag : `v${remoteTag}`;
+            latestApkUrl = `https://github.com/WoeKen/Universal-Downloader/releases/download/${cleanTag}/Universal-Downloader-${cleanTag}-Android.apk`;
+          }
           openModal('updateModal');
         } else if (isUserTriggered) {
           triggerHaptic('success');
@@ -891,9 +896,11 @@
     document.getElementById('settingsCheckUpdateBtn')?.addEventListener('click', () => checkForUpdates(true));
     document.getElementById('startInstallUpdateBtn')?.addEventListener('click', () => {
       triggerHaptic('success');
-      showToast('🚀 正在拉起系统安装器 / 启动极速更新...');
+      showToast('🚀 正在高速下载并准备拉起安装器...');
       if (window.NativeAndroid?.downloadAndInstallApk) {
         window.NativeAndroid.downloadAndInstallApk(latestApkUrl);
+      } else if (window.NativeAndroid?.openDeepLink) {
+        window.NativeAndroid.openDeepLink(latestApkUrl);
       } else {
         window.open(latestApkUrl, '_blank');
       }

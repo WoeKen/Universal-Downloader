@@ -810,7 +810,120 @@ public class MainActivity extends AppCompatActivity {
 
         @JavascriptInterface
         public void installApk(final String filePath) {
-            openDownloadedFile(filePath, "application/vnd.android.package-archive");
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        File file = new File(filePath);
+                        if (!file.exists()) return;
+
+                        Uri uri;
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                            uri = androidx.core.content.FileProvider.getUriForFile(
+                                    MainActivity.this,
+                                    getPackageName() + ".fileprovider",
+                                    file
+                            );
+                        } else {
+                            uri = Uri.fromFile(file);
+                        }
+
+                        Intent intent = new Intent(Intent.ACTION_VIEW);
+                        intent.setDataAndType(uri, "application/vnd.android.package-archive");
+                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(intent);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        openDownloadedFile(filePath, "application/vnd.android.package-archive");
+                    }
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void downloadAndInstallApk(final String apkUrl) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                if (webView != null) {
+                                    webView.evaluateJavascript("window.showToast && window.showToast('🚀 正在启动极速下载最新版 APK...');", null);
+                                }
+                            }
+                        });
+
+                        File downloadDir = new File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "UniversalDownloader");
+                        if (!downloadDir.exists()) downloadDir.mkdirs();
+
+                        final File targetApk = new File(downloadDir, "UniversalDownloader_vLatest.apk");
+                        if (targetApk.exists()) targetApk.delete();
+
+                        String curUrl = (apkUrl != null && !apkUrl.isEmpty()) ? apkUrl : "https://github.com/WoeKen/Universal-Downloader/releases/latest";
+
+                        for (int hop = 0; hop < 6; hop++) {
+                            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(curUrl).openConnection();
+                            conn.setInstanceFollowRedirects(true);
+                            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14)");
+                            conn.setRequestProperty("Accept", "*/*");
+                            conn.connect();
+                            int code = conn.getResponseCode();
+                            if (code == 301 || code == 302 || code == 303 || code == 307 || code == 308) {
+                                String loc = conn.getHeaderField("Location");
+                                conn.disconnect();
+                                if (loc != null && !loc.isEmpty()) {
+                                    curUrl = loc;
+                                    continue;
+                                }
+                            }
+
+                            java.io.InputStream in = conn.getInputStream();
+                            java.io.FileOutputStream out = new java.io.FileOutputStream(targetApk);
+                            byte[] buf = new byte[64 * 1024];
+                            int r;
+                            while ((r = in.read(buf)) != -1) {
+                                out.write(buf, 0, r);
+                            }
+                            out.flush();
+                            out.close();
+                            in.close();
+                            conn.disconnect();
+                            break;
+                        }
+
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    if (webView != null) {
+                                        webView.evaluateJavascript("window.showToast && window.showToast('🎉 下载完成！正在拉起系统安装器...');", null);
+                                    }
+                                    installApk(targetApk.getAbsolutePath());
+                                } catch (Exception ex) {
+                                    ex.printStackTrace();
+                                }
+                            }
+                        });
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        // Open system browser fallback
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(apkUrl));
+                                    browserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                    startActivity(browserIntent);
+                                } catch (Exception ex) {
+                                    ex.printStackTrace();
+                                }
+                            }
+                        });
+                    }
+                }
+            }).start();
         }
     }
 }
