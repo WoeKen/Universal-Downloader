@@ -260,53 +260,80 @@ public class MainActivity extends AppCompatActivity {
                             break;
                         }
 
-                        // 3. Instagram Resolution
+                        // 3. Instagram Direct Video Resolution (High-Efficiency Embed Engine)
                         if (currentUrl.contains("instagram.com") || currentUrl.contains("instagr.am")) {
                             try {
-                                java.net.HttpURLConnection igConn = (java.net.HttpURLConnection) new java.net.URL(currentUrl).openConnection();
-                                igConn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
-                                igConn.setRequestProperty("Accept-Language", "en-US,en;q=0.9");
-                                igConn.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
-                                java.io.BufferedReader igReader = new java.io.BufferedReader(new java.io.InputStreamReader(igConn.getInputStream()));
-                                StringBuilder igHtml = new StringBuilder();
-                                String line;
-                                while ((line = igReader.readLine()) != null) {
-                                    igHtml.append(line);
+                                String shortcode = "";
+                                java.util.regex.Matcher scMat = java.util.regex.Pattern.compile("(?:reel|p|reels)/([A-Za-z0-9_-]+)").matcher(currentUrl);
+                                if (scMat.find()) {
+                                    shortcode = scMat.group(1);
                                 }
-                                igReader.close();
-                                igConn.disconnect();
-                                String html = igHtml.toString();
 
-                                String igVideo = "";
-                                java.util.regex.Matcher vMat = java.util.regex.Pattern.compile("<meta\\s+(?:property|name)=[\"'](?:og:video|og:video:secure_url)[\"']\\s+content=[\"']([^\"']+)[\"']").matcher(html);
-                                if (vMat.find()) igVideo = vMat.group(1).replace("&amp;", "&");
+                                if (!shortcode.isEmpty()) {
+                                    String embedUrl = "https://www.instagram.com/reel/" + shortcode + "/embed/captioned/";
+                                    java.net.HttpURLConnection igConn = (java.net.HttpURLConnection) new java.net.URL(embedUrl).openConnection();
+                                    igConn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
+                                    igConn.setRequestProperty("Accept-Language", "en-US,en;q=0.9");
+                                    igConn.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+                                    igConn.setConnectTimeout(8000);
+                                    igConn.setReadTimeout(8000);
 
-                                String igCover = "";
-                                java.util.regex.Matcher cMat = java.util.regex.Pattern.compile("<meta\\s+(?:property|name)=[\"']og:image[\"']\\s+content=[\"']([^\"']+)[\"']").matcher(html);
-                                if (cMat.find()) igCover = cMat.group(1).replace("&amp;", "&");
+                                    java.io.BufferedReader igReader = new java.io.BufferedReader(new java.io.InputStreamReader(igConn.getInputStream()));
+                                    StringBuilder igHtml = new StringBuilder();
+                                    String line;
+                                    while ((line = igReader.readLine()) != null) {
+                                        igHtml.append(line);
+                                    }
+                                    igReader.close();
+                                    igConn.disconnect();
+                                    String html = igHtml.toString();
 
-                                String igTitle = "Instagram 极清视频";
-                                java.util.regex.Matcher tMat = java.util.regex.Pattern.compile("<meta\\s+(?:property|name)=[\"']og:title[\"']\\s+content=[\"']([^\"']+)[\"']").matcher(html);
-                                if (tMat.find()) igTitle = tMat.group(1).replace("&amp;", "&");
+                                    String igVideo = "";
+                                    java.util.regex.Matcher vMat = java.util.regex.Pattern.compile("video_url\\\\*\"\\s*:\\s*\\\\*\"(https:[^\"\\\\]+?)\\\\*\"").matcher(html);
+                                    if (vMat.find()) {
+                                        igVideo = vMat.group(1).replace("\\/", "/").replace("\\u0026", "&").replace("\\u0025", "%").replace("\\", "");
+                                    } else {
+                                        java.util.regex.Matcher vMat2 = java.util.regex.Pattern.compile("<meta\\s+(?:property|name)=[\"'](?:og:video|og:video:secure_url)[\"']\\s+content=[\"']([^\"']+)[\"']").matcher(html);
+                                        if (vMat2.find()) igVideo = vMat2.group(1).replace("&amp;", "&");
+                                    }
 
-                                if (!igVideo.isEmpty()) {
-                                    final org.json.JSONObject result = new org.json.JSONObject();
-                                    result.put("platform", "instagram");
-                                    result.put("title", igTitle);
-                                    result.put("cover", igCover);
-                                    result.put("downloadUrl", igVideo);
-                                    result.put("category", reqMode.equals("audio") ? "audio" : "video");
+                                    String igCover = "";
+                                    java.util.regex.Matcher cMat = java.util.regex.Pattern.compile("display_url\\\\*\"\\s*:\\s*\\\\*\"(https:[^\"\\\\]+?)\\\\*\"").matcher(html);
+                                    if (cMat.find()) {
+                                        igCover = cMat.group(1).replace("\\/", "/").replace("\\u0026", "&").replace("\\u0025", "%").replace("\\", "");
+                                    } else {
+                                        java.util.regex.Matcher cMat2 = java.util.regex.Pattern.compile("<meta\\s+(?:property|name)=[\"']og:image[\"']\\s+content=[\"']([^\"']+)[\"']").matcher(html);
+                                        if (cMat2.find()) igCover = cMat2.group(1).replace("&amp;", "&");
+                                    }
 
-                                    runOnUiThread(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            if (webView != null) {
-                                                String escaped = result.toString().replace("\\", "\\\\").replace("'", "\\'");
-                                                webView.evaluateJavascript("window.onNativeMediaResolved && window.onNativeMediaResolved('" + callbackId + "', '" + escaped + "');", null);
-                                            }
+                                    String igTitle = "Instagram 极清视频";
+                                    java.util.regex.Matcher tMat = java.util.regex.Pattern.compile("<div class=\"Caption\">.*?<span class=\"CaptionUsername\">.*?</span>(.*?)</div>").matcher(html);
+                                    if (tMat.find()) {
+                                        String cleanCaption = tMat.group(1).replaceAll("<[^>]+>", "").trim();
+                                        if (!cleanCaption.isEmpty()) {
+                                            igTitle = cleanCaption.length() > 50 ? cleanCaption.substring(0, 50) + "..." : cleanCaption;
                                         }
-                                    });
-                                    return;
+                                    }
+
+                                    if (!igVideo.isEmpty()) {
+                                        final org.json.JSONObject result = new org.json.JSONObject();
+                                        result.put("platform", "instagram");
+                                        result.put("title", igTitle);
+                                        result.put("cover", igCover);
+                                        result.put("downloadUrl", igVideo);
+                                        result.put("category", reqMode.equals("audio") ? "audio" : "video");
+
+                                        runOnUiThread(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                if (webView != null) {
+                                                    String escaped = result.toString().replace("\\", "\\\\").replace("'", "\\'");
+                                                    webView.evaluateJavascript("window.onNativeMediaResolved && window.onNativeMediaResolved('" + callbackId + "', '" + escaped + "');", null);
+                                                }
+                                            }
+                                        });
+                                        return;
+                                    }
                                 }
                             } catch (Exception ignored) {}
                         }

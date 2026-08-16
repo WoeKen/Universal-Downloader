@@ -150,9 +150,11 @@ const MobileParsers = {
     };
   },
 
-  // 2. Instagram 极清视频与Reels解析
+  // 2. Instagram 极清视频与Reels解析 (Embed Direct Stream Engine)
   async parseInstagram(url, mode = 'auto') {
     const isAudioMode = mode === 'audio';
+
+    // 1. Try Native Android Resolution First
     if (window.NativeAndroid?.resolveNativeMedia) {
       try {
         const nativeResult = await new Promise((resolve) => {
@@ -169,10 +171,17 @@ const MobileParsers = {
             }
           };
 
+          window.onNativeMediaResolved = function (cbId, dataStr) {
+            if (window._nativeMediaCallbacks && window._nativeMediaCallbacks[cbId]) {
+              window._nativeMediaCallbacks[cbId](dataStr);
+              delete window._nativeMediaCallbacks[cbId];
+            }
+          };
+
           window.NativeAndroid.resolveNativeMedia(url, callbackId, mode);
         });
 
-        if (nativeResult && nativeResult.downloadUrl) {
+        if (nativeResult && nativeResult.downloadUrl && nativeResult.downloadUrl.startsWith('http')) {
           return {
             platform: 'instagram',
             title: isAudioMode ? `${nativeResult.title || 'Instagram'} (音频原声)` : (nativeResult.title || 'Instagram 极清视频'),
@@ -184,6 +193,35 @@ const MobileParsers = {
         }
       } catch (e) {}
     }
+
+    // 2. Direct Embed Stream Extraction Fallback
+    try {
+      const shortcodeMatch = url.match(/(?:reel|p|reels)\/([A-Za-z0-9_-]+)/i);
+      const shortcode = shortcodeMatch ? shortcodeMatch[1] : '';
+      if (shortcode) {
+        const embedUrl = `https://www.instagram.com/reel/${shortcode}/embed/captioned/`;
+        const resp = await fetch(embedUrl, {
+          headers: { 'Accept-Language': 'en-US,en;q=0.9' }
+        });
+        if (resp.ok) {
+          const html = await resp.text();
+          const vMatch = html.match(/video_url\\*"\\s*:\\s*\\*"(https:[^"\\]+?)\\*"/i) || html.match(/"video_url":"([^"]+)"/i);
+          if (vMatch) {
+            const rawUrl = vMatch[1].replace(/\\\//g, '/').replace(/\\u0026/g, '&').replace(/\\u0025/g, '%').replace(/\\/g, '');
+            const cMatch = html.match(/display_url\\*"\\s*:\\s*\\*"(https:[^"\\]+?)\\*"/i);
+            const rawCover = cMatch ? cMatch[1].replace(/\\\//g, '/').replace(/\\u0026/g, '&').replace(/\\/g, '') : '';
+            return {
+              platform: 'instagram',
+              title: isAudioMode ? 'Instagram 无损音频原声' : 'Instagram 极清视频',
+              cover: rawCover || this.createSvgCover(isAudioMode ? 'Instagram MP3' : 'Instagram HD'),
+              downloadUrl: rawUrl,
+              category: isAudioMode ? 'audio' : 'video',
+              extension: isAudioMode ? 'mp3' : 'mp4'
+            };
+          }
+        }
+      }
+    } catch (err) {}
 
     return {
       platform: 'instagram',
