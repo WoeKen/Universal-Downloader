@@ -33,7 +33,7 @@ jobs:
         shell: pwsh
         run: |
           if (Test-Path 'dist/win-unpacked') {
-            Compress-Archive -Path 'dist/win-unpacked/*' -DestinationPath 'dist/Universal-Downloader-v1.3.2-Windows-Portable.zip' -Force
+            Compress-Archive -Path 'dist/win-unpacked/*' -DestinationPath 'dist/Universal-Downloader-v1.3.3-Windows-Portable.zip' -Force
           }
 
       - name: Prepare Clean Windows Assets
@@ -42,10 +42,10 @@ jobs:
           mkdir -p dist/clean-windows
           $setupExe = Get-ChildItem -Path 'dist' -Filter '*.exe' | Where-Object { $_.Name -notlike '*blockmap*' } | Select-Object -First 1
           if ($setupExe) {
-            Copy-Item $setupExe.FullName 'dist/clean-windows/Universal-Downloader-Setup-1.3.2.exe' -Force
+            Copy-Item $setupExe.FullName 'dist/clean-windows/Universal-Downloader-Setup-1.3.3.exe' -Force
           }
-          if (Test-Path 'dist/Universal-Downloader-v1.3.2-Windows-Portable.zip') {
-            Copy-Item 'dist/Universal-Downloader-v1.3.2-Windows-Portable.zip' 'dist/clean-windows/' -Force
+          if (Test-Path 'dist/Universal-Downloader-v1.3.3-Windows-Portable.zip') {
+            Copy-Item 'dist/Universal-Downloader-v1.3.3-Windows-Portable.zip' 'dist/clean-windows/' -Force
           }
           Get-ChildItem 'dist/clean-windows'
 
@@ -84,14 +84,14 @@ jobs:
       - name: Prepare APK Output
         run: |
           mkdir -p dist/clean-android
-          find android/app/build/outputs/apk -name "*.apk" -exec cp {} dist/clean-android/Universal-Downloader-v1.3.2-Android.apk \;
+          find android/app/build/outputs/apk -name "*.apk" -exec cp {} dist/clean-android/Universal-Downloader-v1.3.3-Android.apk \;
           ls -la dist/clean-android/
 
       - name: Upload Android Artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
-          path: dist/clean-android/Universal-Downloader-v1.3.2-Android.apk
+          path: dist/clean-android/Universal-Downloader-v1.3.3-Android.apk
 
   publish-release:
     needs: [build-windows, build-android]
@@ -136,12 +136,12 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "🚀 Universal Downloader v1.3.2 (Windows & Android 旗舰双端发布)"
+          name: "🚀 Universal Downloader v1.3.3 (Windows & Android 旗舰双端发布)"
           body_path: RELEASE_NOTES.md
           files: |
-            release-assets/Universal-Downloader-Setup-1.3.2.exe
-            release-assets/Universal-Downloader-v1.3.2-Windows-Portable.zip
-            release-assets/Universal-Downloader-v1.3.2-Android.apk
+            release-assets/Universal-Downloader-Setup-1.3.3.exe
+            release-assets/Universal-Downloader-v1.3.3-Windows-Portable.zip
+            release-assets/Universal-Downloader-v1.3.3-Android.apk
           draft: false
           prerelease: false
           generate_release_notes: false

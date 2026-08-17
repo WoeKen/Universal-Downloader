@@ -15,6 +15,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.FileProvider;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -45,6 +46,23 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Request runtime storage and media permissions
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                ActivityCompat.requestPermissions(this, new String[]{
+                        android.Manifest.permission.READ_MEDIA_VIDEO,
+                        android.Manifest.permission.READ_MEDIA_AUDIO,
+                        android.Manifest.permission.READ_MEDIA_IMAGES,
+                        android.Manifest.permission.POST_NOTIFICATIONS
+                }, 101);
+            } else if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                ActivityCompat.requestPermissions(this, new String[]{
+                        android.Manifest.permission.READ_EXTERNAL_STORAGE,
+                        android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+                }, 101);
+            }
+        } catch (Exception ignored) {}
 
         // Immersive Edge-to-Edge Fluid Setup
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
@@ -80,7 +98,7 @@ public class MainActivity extends AppCompatActivity {
         settings.setDisplayZoomControls(false);
 
         // High compatibility modern Android User Agent
-        settings.setUserAgentString("Mozilla/5.0 (Linux; Android 14; Mobile; UniversalDownloader/1.3.2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36");
+        settings.setUserAgentString("Mozilla/5.0 (Linux; Android 14; Mobile; UniversalDownloader/1.3.3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36");
 
         // Bind Native Android Bridge
         webView.addJavascriptInterface(new AndroidNativeBridge(), "NativeAndroid");
@@ -237,6 +255,39 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private File getSafeDownloadDirectory() {
+        try {
+            File publicDir = new File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "UniversalDownloader");
+            if (!publicDir.exists()) {
+                publicDir.mkdirs();
+            }
+            if (publicDir.exists() && publicDir.canWrite()) {
+                File testFile = new File(publicDir, ".write_test_" + System.currentTimeMillis());
+                if (testFile.createNewFile()) {
+                    testFile.delete();
+                    return publicDir;
+                }
+            }
+        } catch (Exception ignored) {}
+
+        // Fallback 1: App-scoped external downloads dir (100% accessible on Android 10-14 without permissions)
+        File extAppDir = getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS);
+        if (extAppDir != null) {
+            if (!extAppDir.exists()) extAppDir.mkdirs();
+            return extAppDir;
+        }
+
+        // Fallback 2: App-scoped root external files dir
+        File extRoot = getExternalFilesDir(null);
+        if (extRoot != null) {
+            if (!extRoot.exists()) extRoot.mkdirs();
+            return extRoot;
+        }
+
+        // Fallback 3: Internal files dir
+        return getFilesDir();
+    }
+
     // Native Bridge Interface for JavaScript
     public class AndroidNativeBridge {
 
@@ -246,7 +297,7 @@ public class MainActivity extends AppCompatActivity {
                 android.content.pm.PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
                 return "v" + pInfo.versionName;
             } catch (Exception e) {
-                return "v1.3.2";
+                return "v1.3.3";
             }
         }
 
@@ -816,15 +867,14 @@ public class MainActivity extends AppCompatActivity {
                             throw new Exception("下载地址非有效视频多媒体流，请重新透析或检查链接");
                         }
 
+                        // Robust safe filename sanitizer (removes backticks, control chars, symbols)
                         String cleanTitle = (rawTitle != null && !rawTitle.trim().isEmpty() && !rawTitle.contains("Twitter Embed") && !rawTitle.contains("Instagram Embed"))
-                                ? rawTitle.replaceAll("[\\\\/:*?\"<>|]", "_").trim()
+                                ? rawTitle.replaceAll("[\\\\/:*?\"<>|`'~^#%&{}$!@+=\\r\\n\\t]+", "_").trim()
                                 : ("Media_" + System.currentTimeMillis());
 
-                        if (cleanTitle.length() > 50) cleanTitle = cleanTitle.substring(0, 50);
+                        if (cleanTitle.length() > 40) cleanTitle = cleanTitle.substring(0, 40);
 
-                        File downloadDir = new File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "UniversalDownloader");
-                        if (!downloadDir.exists()) downloadDir.mkdirs();
-
+                        File downloadDir = getSafeDownloadDirectory();
                         String defaultExt = isVideo ? ".mp4" : ".mp3";
                         targetFile = new File(downloadDir, cleanTitle + defaultExt);
                         int count = 1;
@@ -1063,9 +1113,7 @@ public class MainActivity extends AppCompatActivity {
                             }
                         });
 
-                        File downloadDir = new File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "UniversalDownloader");
-                        if (!downloadDir.exists()) downloadDir.mkdirs();
-
+                        File downloadDir = getSafeDownloadDirectory();
                         File targetApk = new File(downloadDir, "UniversalDownloader_vLatest.apk");
                         if (targetApk.exists()) targetApk.delete();
 
