@@ -25,28 +25,24 @@ jobs:
         run: npm install
 
       - name: Build Electron Windows Package
-        run: npx electron-builder --win
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create Portable Zip
-        shell: pwsh
-        run: |
-          if (Test-Path 'dist/win-unpacked') {
-            Compress-Archive -Path 'dist/win-unpacked/*' -DestinationPath 'dist/Universal-Downloader-v1.3.5-Windows-Portable.zip' -Force
-          }
+        run: npx electron-builder --win --publish never
 
       - name: Prepare Clean Windows Assets
         shell: pwsh
         run: |
+          $ver = "${{ github.ref_name }}".TrimStart('v')
+          if ([string]::IsNullOrEmpty($ver)) { $ver = "1.3.6" }
           mkdir -p dist/clean-windows
+
           $setupExe = Get-ChildItem -Path 'dist' -Filter '*.exe' | Where-Object { $_.Name -notlike '*blockmap*' } | Select-Object -First 1
           if ($setupExe) {
-            Copy-Item $setupExe.FullName 'dist/clean-windows/Universal-Downloader-Setup-1.3.5.exe' -Force
+            Copy-Item $setupExe.FullName "dist/clean-windows/Universal-Downloader-Setup-$ver.exe" -Force
           }
-          if (Test-Path 'dist/Universal-Downloader-v1.3.5-Windows-Portable.zip') {
-            Copy-Item 'dist/Universal-Downloader-v1.3.5-Windows-Portable.zip' 'dist/clean-windows/' -Force
+
+          if (Test-Path 'dist/win-unpacked') {
+            Compress-Archive -Path 'dist/win-unpacked/*' -DestinationPath "dist/clean-windows/Universal-Downloader-v$ver-Windows-Portable.zip" -Force
           }
+
           Get-ChildItem 'dist/clean-windows'
 
       - name: Upload Windows Artifacts
@@ -83,15 +79,18 @@ jobs:
 
       - name: Prepare APK Output
         run: |
+          TAG="${{ github.ref_name }}"
+          VER="${TAG#v}"
+          if [ -z "$VER" ]; then VER="1.3.6"; fi
           mkdir -p dist/clean-android
-          find android/app/build/outputs/apk -name "*.apk" -exec cp {} dist/clean-android/Universal-Downloader-v1.3.5-Android.apk \;
+          find android/app/build/outputs/apk -name "*.apk" -exec cp {} "dist/clean-android/Universal-Downloader-v${VER}-Android.apk" \;
           ls -la dist/clean-android/
 
       - name: Upload Android Artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
-          path: dist/clean-android/Universal-Downloader-v1.3.5-Android.apk
+          path: dist/clean-android/*
 
   publish-release:
     needs: [build-windows, build-android]
@@ -136,12 +135,9 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "🚀 Universal Downloader v1.3.6 (Windows & Android 旗舰双端发布)"
+          name: "🚀 Universal Downloader ${{ github.ref_name }} (Windows & Android 旗舰双端发布)"
           body_path: RELEASE_NOTES.md
-          files: |
-            release-assets/Universal-Downloader-Setup-1.3.6.exe
-            release-assets/Universal-Downloader-v1.3.6-Windows-Portable.zip
-            release-assets/Universal-Downloader-v1.3.6-Android.apk
+          files: release-assets/*
           draft: false
           prerelease: false
           generate_release_notes: false
