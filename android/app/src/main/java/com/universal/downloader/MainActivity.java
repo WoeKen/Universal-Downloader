@@ -76,7 +76,7 @@ public class MainActivity extends AppCompatActivity {
         settings.setDisplayZoomControls(false);
 
         // High compatibility modern Android User Agent
-        settings.setUserAgentString("Mozilla/5.0 (Linux; Android 14; Mobile; UniversalDownloader/1.2.9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36");
+        settings.setUserAgentString("Mozilla/5.0 (Linux; Android 14; Mobile; UniversalDownloader/1.3.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36");
 
         // Bind Native Android Bridge
         webView.addJavascriptInterface(new AndroidNativeBridge(), "NativeAndroid");
@@ -206,7 +206,7 @@ public class MainActivity extends AppCompatActivity {
                 android.content.pm.PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
                 return "v" + pInfo.versionName;
             } catch (Exception e) {
-                return "v1.2.9";
+                return "v1.3.0";
             }
         }
 
@@ -562,16 +562,8 @@ public class MainActivity extends AppCompatActivity {
 
                         if (cleanUrl.contains("twitter.com") || cleanUrl.contains("x.com")) {
                             detectedPlat = "twitter";
-                            Matcher tMatcher = Pattern.compile("status/(\\d+)").matcher(cleanUrl);
-                            if (tMatcher.find()) {
-                                targetLoadUrl = "https://platform.twitter.com/embed/Tweet.html?id=" + tMatcher.group(1);
-                            }
                         } else if (cleanUrl.contains("instagram.com") || cleanUrl.contains("instagr.am")) {
                             detectedPlat = "instagram";
-                            Matcher scMat = Pattern.compile("(?:reel|p|reels)/([A-Za-z0-9_-]+)").matcher(cleanUrl);
-                            if (scMat.find()) {
-                                targetLoadUrl = "https://www.instagram.com/reel/" + scMat.group(1) + "/embed/";
-                            }
                         } else if (cleanUrl.contains("douyin.com")) {
                             detectedPlat = "douyin";
                         } else if (cleanUrl.contains("tiktok.com")) {
@@ -623,14 +615,15 @@ public class MainActivity extends AppCompatActivity {
                                 String finalUrl = capturedVideoUrl[0];
                                 String finalCover = capturedCoverUrl[0];
                                 String finalTitle = capturedTitle[0];
-                                if (finalTitle.isEmpty()) {
+                                if (finalTitle.isEmpty() || finalTitle.contains("Embed") || finalTitle.contains("Twitter") || finalTitle.contains("Instagram")) {
                                     if (platformTag.equals("douyin")) finalTitle = "抖音无水印高清视频";
                                     else if (platformTag.equals("twitter")) finalTitle = "X / Twitter 极清视频";
                                     else if (platformTag.equals("instagram")) finalTitle = "Instagram 极清视频";
                                     else finalTitle = "高清多媒体视频";
                                 }
 
-                                if (!finalUrl.isEmpty()) {
+                                // STRICT VALIDATION: finalUrl MUST be a binary media stream URL
+                                if (!finalUrl.isEmpty() && !finalUrl.contains(".html") && !finalUrl.contains("embed") && (finalUrl.contains(".mp4") || finalUrl.contains(".m3u8") || finalUrl.contains(".webm") || finalUrl.contains("video.twimg.com") || finalUrl.contains("cdninstagram.com") || finalUrl.contains("fbcdn.net") || finalUrl.contains("phncdn.com") || finalUrl.contains("douyinvod.com") || finalUrl.contains("googlevideo.com"))) {
                                     try {
                                         JSONObject result = new JSONObject();
                                         result.put("platform", platformTag);
@@ -662,7 +655,8 @@ public class MainActivity extends AppCompatActivity {
                                         lower.contains("cdninstagram.com") || lower.contains("fbcdn.net") || lower.contains("douyinvod.com") ||
                                         lower.contains("kspkg.com") || lower.contains("googlevideo.com/videoplayback");
 
-                                    if (isMediaStream && !lower.contains(".jpg") && !lower.contains(".png") && !lower.contains(".webp") && !lower.contains(".gif") && !lower.contains(".css") && !lower.contains(".js")) {
+                                    // Strictly reject HTML pages and assets
+                                    if (isMediaStream && !lower.contains(".html") && !lower.contains(".htm") && !lower.contains("embed/tweet") && !lower.contains(".jpg") && !lower.contains(".png") && !lower.contains(".webp") && !lower.contains(".gif") && !lower.contains(".css") && !lower.contains(".js")) {
                                         capturedVideoUrl[0] = reqUrl.replace("playwm", "play");
                                         extractorView.postDelayed(finishCallback, 300);
                                     }
@@ -685,13 +679,16 @@ public class MainActivity extends AppCompatActivity {
                                     "  var v = document.querySelector('video') || document.querySelector('video source');" +
                                     "  var src = v ? (v.currentSrc || v.src) : '';" +
                                     "  var poster = v ? (v.poster || '') : '';" +
-                                    "  var metaV = document.querySelector('meta[property=\"og:video\"], meta[property=\"og:video:secure_url\"], meta[property=\"og:video:url\"], meta[name=\"twitter:player:stream\"]');" +
+                                    "  var metaV = document.querySelector('meta[property=\"og:video\"], meta[property=\"og:video:secure_url\"], meta[property=\"og:video:url\"]');" +
                                     "  if (!src && metaV) src = metaV.content;" +
+                                    "  if (src) {" +
+                                    "    var ls = src.toLowerCase();" +
+                                    "    if (ls.indexOf('.html') !== -1 || ls.indexOf('embed') !== -1 || ls.indexOf('twitter.com') !== -1 || ls.indexOf('x.com') !== -1 || ls.indexOf('instagram.com') !== -1) { src = ''; }" +
+                                    "  }" +
                                     "  var metaImg = document.querySelector('meta[property=\"og:image\"], meta[name=\"twitter:image\"]');" +
                                     "  if (!poster && metaImg) poster = metaImg.content;" +
                                     "  var title = document.title || '';" +
-                                    "  var metaT = document.querySelector('meta[property=\"og:title\"], meta[name=\"twitter:title\"]');" +
-                                    "  if (metaT && metaT.content) title = metaT.content;" +
+                                    "  if (title.indexOf('Twitter Embed') !== -1 || title.indexOf('Instagram Embed') !== -1 || !title) { title = ''; }" +
                                     "  return JSON.stringify({ src: src, poster: poster, title: title });" +
                                     "})()",
                                     new ValueCallback<String>() {
@@ -707,7 +704,12 @@ public class MainActivity extends AppCompatActivity {
                                                     String dSrc = domJson.optString("src");
                                                     String dPoster = domJson.optString("poster");
                                                     String dTitle = domJson.optString("title");
-                                                    if (!dSrc.isEmpty() && capturedVideoUrl[0].isEmpty()) capturedVideoUrl[0] = dSrc.replace("playwm", "play");
+                                                    if (!dSrc.isEmpty() && capturedVideoUrl[0].isEmpty()) {
+                                                        String lSrc = dSrc.toLowerCase();
+                                                        if (!lSrc.contains(".html") && !lSrc.contains("embed") && (lSrc.contains(".mp4") || lSrc.contains(".m3u8") || lSrc.contains("twimg.com") || lSrc.contains("cdninstagram") || lSrc.contains("fbcdn"))) {
+                                                            capturedVideoUrl[0] = dSrc.replace("playwm", "play");
+                                                        }
+                                                    }
                                                     if (!dPoster.isEmpty() && capturedCoverUrl[0].isEmpty()) capturedCoverUrl[0] = dPoster;
                                                     if (!dTitle.isEmpty() && capturedTitle[0].isEmpty()) {
                                                         capturedTitle[0] = dTitle.replace(" - 抖音", "").replace("在抖音记录美好生活", "").trim();
@@ -770,7 +772,11 @@ public class MainActivity extends AppCompatActivity {
                     FileOutputStream out = null;
                     File targetFile = null;
                     try {
-                        String cleanTitle = (rawTitle != null && !rawTitle.trim().isEmpty())
+                        if (downloadUrl == null || downloadUrl.isEmpty() || downloadUrl.contains("platform.twitter.com/embed") || downloadUrl.contains("instagram.com/reel/") || downloadUrl.contains("instagram.com/p/")) {
+                            throw new Exception("下载地址非有效视频多媒体流，请重新透析或检查链接");
+                        }
+
+                        String cleanTitle = (rawTitle != null && !rawTitle.trim().isEmpty() && !rawTitle.contains("Twitter Embed") && !rawTitle.contains("Instagram Embed"))
                                 ? rawTitle.replaceAll("[\\\\/:*?\"<>|]", "_").trim()
                                 : ("Media_" + System.currentTimeMillis());
 
@@ -868,15 +874,15 @@ public class MainActivity extends AppCompatActivity {
 
                         // 3. Final Content Verification (Strict Anti-Corruption Check)
                         final long actualFileSize = targetFile.length();
-                        if (actualFileSize < 30 * 1024) {
-                            // Check if file starts with HTML tags
+                        if (actualFileSize < 50 * 1024) {
+                            // Check if file starts with HTML tags or is not a media file
                             FileInputStream fis = new FileInputStream(targetFile);
                             byte[] headBytes = new byte[256];
                             int readHead = fis.read(headBytes);
                             fis.close();
                             if (readHead > 0) {
                                 String headStr = new String(headBytes, 0, readHead).toLowerCase();
-                                if (headStr.contains("<!doctype") || headStr.contains("<html") || headStr.contains("<body") || headStr.contains("<script")) {
+                                if (headStr.contains("<!doctype") || headStr.contains("<html") || headStr.contains("<body") || headStr.contains("<script") || headStr.contains("<div") || headStr.contains("<head")) {
                                     targetFile.delete();
                                     throw new Exception("下载内容为网页鉴权页面，非有效视频流");
                                 }

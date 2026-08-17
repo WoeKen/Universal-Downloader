@@ -261,10 +261,12 @@ const MobileParsers = {
           window.NativeAndroid.resolveNativeMedia(url, callbackId, mode);
         });
 
-        if (nativeResult && nativeResult.downloadUrl && nativeResult.downloadUrl.startsWith('http') && !nativeResult.downloadUrl.includes('twitter.com') && !nativeResult.downloadUrl.includes('x.com/')) {
+        if (nativeResult && nativeResult.downloadUrl && nativeResult.downloadUrl.startsWith('http') && !nativeResult.downloadUrl.includes('twitter.com') && !nativeResult.downloadUrl.includes('x.com/') && !nativeResult.downloadUrl.includes('embed') && !nativeResult.downloadUrl.includes('.html')) {
+          let cleanTitle = nativeResult.title || 'X / Twitter 极清视频';
+          if (cleanTitle.includes('Twitter Embed') || cleanTitle.includes('Instagram Embed')) cleanTitle = 'X / Twitter 极清视频';
           return {
             platform: 'twitter',
-            title: isAudioMode ? `${nativeResult.title || 'X / Twitter'} (音频原声)` : (nativeResult.title || 'X / Twitter 极清视频'),
+            title: isAudioMode ? `${cleanTitle} (音频原声)` : cleanTitle,
             cover: nativeResult.cover || this.createSvgCover(isAudioMode ? 'Twitter MP3' : 'X / Twitter HD'),
             downloadUrl: nativeResult.downloadUrl,
             category: isAudioMode ? 'audio' : 'video',
@@ -274,7 +276,7 @@ const MobileParsers = {
       } catch (e) {}
     }
 
-    throw new Error('未嗅探到 X / Twitter 媒体流，请检查推文是否包含视频或公开权限');
+    throw new Error('未嗅探到 X / Twitter 视频原始媒体流，请检查推文是否包含有效公开视频');
   },
 
   // 4. YouTube 高清视频解析
