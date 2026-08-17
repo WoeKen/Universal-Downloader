@@ -6,6 +6,15 @@
   'use strict';
 
   let tasks = JSON.parse(localStorage.getItem('mobile_tasks') || '[]');
+  // Auto-purge any legacy corrupted test tasks (< 50KB or Twitter/Instagram Embed)
+  tasks = tasks.filter(t => {
+    if (t.size && t.size < 50000 && (t.title?.includes('Twitter Embed') || t.title?.includes('Instagram Embed') || t.platform === 'twitter')) {
+      return false;
+    }
+    return true;
+  });
+  localStorage.setItem('mobile_tasks', JSON.stringify(tasks.slice(0, 100)));
+
   let currentFilter = 'all';
   let isDarkTheme = localStorage.getItem('mobile_theme') !== 'light';
   let activePlayingTask = null;
@@ -253,18 +262,34 @@
     }, 250);
   }
 
-  let currentFormatMode = 'auto';
-
-  // Format Mode Pill Switcher
+  let currentFormatMode = 'video';
   document.querySelectorAll('.format-mode-pill').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.format-mode-pill').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      currentFormatMode = btn.dataset.mode || 'auto';
+      currentFormatMode = btn.dataset.mode || 'video';
       triggerHaptic('selection');
-      const modeNames = { auto: '⚡ 智能自适应', video: '🎬 极清视频 (MP4)', audio: '🎵 提取音频 (MP3)' };
+      const modeNames = { video: '🎬 极清视频 (MP4)', audio: '🎵 提取音频 (MP3)', file: '📦 文件/应用' };
       showToast(`透析模式已切换至: ${modeNames[currentFormatMode] || currentFormatMode}`);
     });
+  });
+
+  // Dynamic Input Clear Button
+  const urlInputEl = document.getElementById('mobileUrlInput');
+  const clearInputBtnEl = document.getElementById('clearInputBtn');
+
+  urlInputEl?.addEventListener('input', () => {
+    if (clearInputBtnEl) {
+      clearInputBtnEl.classList.toggle('hidden', !urlInputEl.value.trim());
+    }
+  });
+
+  clearInputBtnEl?.addEventListener('click', () => {
+    if (urlInputEl) {
+      urlInputEl.value = '';
+      clearInputBtnEl.classList.add('hidden');
+      triggerHaptic();
+    }
   });
 
   async function handleAddUrl(rawInput) {
@@ -836,7 +861,7 @@
     }
 
     // 8. In-App OTA Update Engine
-    let APP_VERSION = 'v1.3.3';
+    let APP_VERSION = 'v1.3.4';
     if (window.NativeAndroid?.getAppVersion) {
       try {
         const nativeVer = window.NativeAndroid.getAppVersion();
