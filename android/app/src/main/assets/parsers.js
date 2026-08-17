@@ -233,7 +233,7 @@ const MobileParsers = {
   },
 
   // 3. Twitter / X 极清视频解析
-  async parseTwitter(url, mode = 'auto') {
+  async parseTwitter(url, mode = 'video') {
     const isAudioMode = mode === 'audio';
     if (window.NativeAndroid?.resolveNativeMedia) {
       try {
@@ -275,6 +275,55 @@ const MobileParsers = {
         }
       } catch (e) {}
     }
+
+    // Direct Web Fallback (fxTwitter & vxTwitter API)
+    try {
+      const match = url.match(/(?:twitter\.com|x\.com)\/([^/]+)\/status\/(\d+)/i);
+      if (match) {
+        const user = match[1];
+        const tweetId = match[2];
+
+        try {
+          const fxRes = await fetch(`https://api.fxtwitter.com/${user}/status/${tweetId}`, { cache: 'no-cache' });
+          if (fxRes.ok) {
+            const data = await fxRes.json();
+            const videos = data.tweet?.media?.videos;
+            if (videos && videos.length > 0) {
+              const v = videos[0];
+              const title = data.tweet?.text?.replace(/[\r\n]+/g, ' ').slice(0, 60) || 'X / Twitter 极清视频';
+              return {
+                platform: 'twitter',
+                title: isAudioMode ? `${title} (音频原声)` : title,
+                cover: v.thumbnail_url || this.createSvgCover('X / Twitter HD'),
+                downloadUrl: v.url,
+                category: isAudioMode ? 'audio' : 'video',
+                extension: isAudioMode ? 'mp3' : 'mp4'
+              };
+            }
+          }
+        } catch (err) {}
+
+        try {
+          const vxRes = await fetch(`https://api.vxtwitter.com/${user}/status/${tweetId}`, { cache: 'no-cache' });
+          if (vxRes.ok) {
+            const data = await vxRes.json();
+            const mUrls = data.mediaURLs || [];
+            const vid = mUrls.find(u => u.includes('.mp4') || u.includes('video.twimg.com'));
+            if (vid) {
+              const title = data.text?.replace(/[\r\n]+/g, ' ').slice(0, 60) || 'X / Twitter 极清视频';
+              return {
+                platform: 'twitter',
+                title: isAudioMode ? `${title} (音频原声)` : title,
+                cover: this.createSvgCover('X / Twitter HD'),
+                downloadUrl: vid,
+                category: isAudioMode ? 'audio' : 'video',
+                extension: isAudioMode ? 'mp3' : 'mp4'
+              };
+            }
+          }
+        } catch (err) {}
+      }
+    } catch (e) {}
 
     throw new Error('未嗅探到 X / Twitter 视频原始媒体流，请检查推文是否包含有效公开视频');
   },

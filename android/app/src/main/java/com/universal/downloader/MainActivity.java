@@ -30,6 +30,7 @@ import java.net.CookieHandler;
 import java.net.CookieManager;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -98,7 +99,7 @@ public class MainActivity extends AppCompatActivity {
         settings.setDisplayZoomControls(false);
 
         // High compatibility modern Android User Agent
-        settings.setUserAgentString("Mozilla/5.0 (Linux; Android 14; Mobile; UniversalDownloader/1.3.4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36");
+        settings.setUserAgentString("Mozilla/5.0 (Linux; Android 14; Mobile; UniversalDownloader/1.3.5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36");
 
         // Bind Native Android Bridge
         webView.addJavascriptInterface(new AndroidNativeBridge(), "NativeAndroid");
@@ -377,7 +378,16 @@ public class MainActivity extends AppCompatActivity {
                             break;
                         }
 
-                        // 3. Instagram Direct GraphQL Resolution (Doc ID 10015901848480474 Engine)
+                        // 3. Twitter / X Direct High-Definition Resolution (fxTwitter, vxTwitter, TwitSave)
+                        if (currentUrl.contains("twitter.com") || currentUrl.contains("x.com")) {
+                            JSONObject res = resolveTwitterDirect(currentUrl, reqMode);
+                            if (res != null) {
+                                notifyMediaResolved(callbackId, res);
+                                return;
+                            }
+                        }
+
+                        // 4. Instagram Direct GraphQL Resolution (Doc ID 10015901848480474 Engine)
                         if (currentUrl.contains("instagram.com") || currentUrl.contains("instagr.am")) {
                             JSONObject res = resolveInstagramDirect(currentUrl, reqMode);
                             if (res != null) {
@@ -408,10 +418,142 @@ public class MainActivity extends AppCompatActivity {
                         e.printStackTrace();
                     }
 
-                    // 6. Universal Sandboxed Active Chromium Stream Sniffer (Supports X/Twitter, Tube & arbitrary web pages)
+                    // 6. Universal Sandboxed Active Chromium Stream Sniffer (Supports Tube & arbitrary web pages)
                     resolveWithChromiumSniffer(rawInput, callbackId, reqMode);
                 }
             }).start();
+        }
+
+        private JSONObject resolveTwitterDirect(String currentUrl, String reqMode) {
+            try {
+                Matcher tm = Pattern.compile("(?:twitter\\.com|x\\.com)/([^/]+)/status/(\\d+)").matcher(currentUrl);
+                if (!tm.find()) return null;
+                String user = tm.group(1);
+                String tweetId = tm.group(2);
+
+                // 1. Try fxTwitter API (Supports HD video, titles, covers)
+                try {
+                    String fxUrl = "https://api.fxtwitter.com/" + user + "/status/" + tweetId;
+                    HttpURLConnection conn = (HttpURLConnection) new URL(fxUrl).openConnection();
+                    conn.setRequestProperty("User-Agent", "UniversalDownloader/1.0");
+                    conn.setConnectTimeout(6000);
+                    conn.setReadTimeout(6000);
+                    if (conn.getResponseCode() == 200) {
+                        BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+                        StringBuilder sb = new StringBuilder();
+                        String l;
+                        while ((l = r.readLine()) != null) sb.append(l);
+                        r.close();
+                        conn.disconnect();
+
+                        JSONObject fx = new JSONObject(sb.toString());
+                        JSONObject tweet = fx.optJSONObject("tweet");
+                        if (tweet != null) {
+                            String title = tweet.optString("text", "X / Twitter 极清视频");
+                            if (title.length() > 60) title = title.substring(0, 60) + "...";
+                            title = title.replaceAll("[\\r\\n]+", " ").trim();
+
+                            JSONObject media = tweet.optJSONObject("media");
+                            if (media != null) {
+                                JSONArray videos = media.optJSONArray("videos");
+                                if (videos != null && videos.length() > 0) {
+                                    JSONObject firstVideo = videos.getJSONObject(0);
+                                    String videoUrl = firstVideo.optString("url");
+                                    String coverUrl = firstVideo.optString("thumbnail_url");
+                                    if (!videoUrl.isEmpty()) {
+                                        JSONObject result = new JSONObject();
+                                        result.put("platform", "twitter");
+                                        result.put("title", title);
+                                        result.put("cover", coverUrl);
+                                        result.put("downloadUrl", videoUrl);
+                                        result.put("category", reqMode.equals("audio") ? "audio" : "video");
+                                        return result;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception ignored) {}
+
+                // 2. Try vxTwitter API
+                try {
+                    String vxUrl = "https://api.vxtwitter.com/" + user + "/status/" + tweetId;
+                    HttpURLConnection conn = (HttpURLConnection) new URL(vxUrl).openConnection();
+                    conn.setRequestProperty("User-Agent", "UniversalDownloader/1.0");
+                    conn.setConnectTimeout(6000);
+                    conn.setReadTimeout(6000);
+                    if (conn.getResponseCode() == 200) {
+                        BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+                        StringBuilder sb = new StringBuilder();
+                        String l;
+                        while ((l = r.readLine()) != null) sb.append(l);
+                        r.close();
+                        conn.disconnect();
+
+                        JSONObject vx = new JSONObject(sb.toString());
+                        String title = vx.optString("text", "X / Twitter 极清视频");
+                        if (title.length() > 60) title = title.substring(0, 60) + "...";
+                        title = title.replaceAll("[\\r\\n]+", " ").trim();
+
+                        String videoUrl = "";
+                        JSONArray mediaUrls = vx.optJSONArray("mediaURLs");
+                        if (mediaUrls != null) {
+                            for (int i = 0; i < mediaUrls.length(); i++) {
+                                String mUrl = mediaUrls.getString(i);
+                                if (mUrl.contains(".mp4") || mUrl.contains("video.twimg.com")) {
+                                    videoUrl = mUrl;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (!videoUrl.isEmpty()) {
+                            JSONObject result = new JSONObject();
+                            result.put("platform", "twitter");
+                            result.put("title", title);
+                            result.put("cover", "https://abs.twimg.com/icons/apple-touch-icon-192x192.png");
+                            result.put("downloadUrl", videoUrl);
+                            result.put("category", reqMode.equals("audio") ? "audio" : "video");
+                            return result;
+                        }
+                    }
+                } catch (Exception ignored) {}
+
+                // 3. Try TwitSave Engine
+                try {
+                    String cleanTweet = currentUrl.replaceAll("/video/\\d+", "");
+                    String twitSaveUrl = "https://twitsave.com/info?url=" + URLEncoder.encode(cleanTweet, "UTF-8");
+                    HttpURLConnection conn = (HttpURLConnection) new URL(twitSaveUrl).openConnection();
+                    conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+                    conn.setConnectTimeout(7000);
+                    conn.setReadTimeout(7000);
+                    if (conn.getResponseCode() == 200) {
+                        BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+                        StringBuilder sb = new StringBuilder();
+                        String l;
+                        while ((l = r.readLine()) != null) sb.append(l);
+                        r.close();
+                        conn.disconnect();
+
+                        String html = sb.toString();
+                        Matcher vm = Pattern.compile("https?://video\\.twimg\\.com/[^\"'\\s<>]+\\.mp4[^\"'\\s<>]*").matcher(html);
+                        if (vm.find()) {
+                            String videoUrl = vm.group(0);
+                            JSONObject result = new JSONObject();
+                            result.put("platform", "twitter");
+                            result.put("title", "X / Twitter 极清视频");
+                            result.put("cover", "https://abs.twimg.com/icons/apple-touch-icon-192x192.png");
+                            result.put("downloadUrl", videoUrl);
+                            result.put("category", reqMode.equals("audio") ? "audio" : "video");
+                            return result;
+                        }
+                    }
+                } catch (Exception ignored) {}
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return null;
         }
 
         private JSONObject resolveInstagramDirect(String currentUrl, String reqMode) {
