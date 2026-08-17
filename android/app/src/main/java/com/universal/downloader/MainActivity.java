@@ -29,6 +29,8 @@ import java.net.CookieHandler;
 import java.net.CookieManager;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -66,6 +68,8 @@ public class MainActivity extends AppCompatActivity {
         settings.setDatabaseEnabled(true);
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
+        settings.setAllowFileAccessFromFileURLs(true);
+        settings.setAllowUniversalAccessFromFileURLs(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
@@ -76,7 +80,7 @@ public class MainActivity extends AppCompatActivity {
         settings.setDisplayZoomControls(false);
 
         // High compatibility modern Android User Agent
-        settings.setUserAgentString("Mozilla/5.0 (Linux; Android 14; Mobile; UniversalDownloader/1.3.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36");
+        settings.setUserAgentString("Mozilla/5.0 (Linux; Android 14; Mobile; UniversalDownloader/1.3.2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36");
 
         // Bind Native Android Bridge
         webView.addJavascriptInterface(new AndroidNativeBridge(), "NativeAndroid");
@@ -101,6 +105,42 @@ public class MainActivity extends AppCompatActivity {
         });
 
         webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                if (request != null && request.getUrl() != null) {
+                    String url = request.getUrl().toString();
+                    if (url.startsWith("https://localhost/local-media") || url.startsWith("http://localhost/local-media")) {
+                        try {
+                            Uri uri = request.getUrl();
+                            String path = uri.getQueryParameter("path");
+                            if (path != null && !path.isEmpty()) {
+                                File f = new File(path);
+                                if (f.exists() && f.isFile()) {
+                                    String mime = "video/mp4";
+                                    String lp = path.toLowerCase();
+                                    if (lp.endsWith(".mp3")) mime = "audio/mpeg";
+                                    else if (lp.endsWith(".jpg") || lp.endsWith(".jpeg")) mime = "image/jpeg";
+                                    else if (lp.endsWith(".png")) mime = "image/png";
+                                    else if (lp.endsWith(".webp")) mime = "image/webp";
+
+                                    FileInputStream fis = new FileInputStream(f);
+                                    WebResourceResponse resp = new WebResourceResponse(mime, "UTF-8", fis);
+                                    Map<String, String> headers = new HashMap<>();
+                                    headers.put("Access-Control-Allow-Origin", "*");
+                                    headers.put("Accept-Ranges", "bytes");
+                                    headers.put("Content-Length", String.valueOf(f.length()));
+                                    resp.setResponseHeaders(headers);
+                                    return resp;
+                                }
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+                return super.shouldInterceptRequest(view, request);
+            }
+
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
@@ -206,7 +246,7 @@ public class MainActivity extends AppCompatActivity {
                 android.content.pm.PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
                 return "v" + pInfo.versionName;
             } catch (Exception e) {
-                return "v1.3.0";
+                return "v1.3.2";
             }
         }
 
@@ -963,7 +1003,7 @@ public class MainActivity extends AppCompatActivity {
                         Intent intent = new Intent(Intent.ACTION_VIEW);
                         intent.setDataAndType(uri, effectiveMime);
                         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
-                        startActivity(Intent.createChooser(intent, "打开文件: " + file.getName()));
+                        startActivity(Intent.createChooser(intent, "播放文件: " + file.getName()));
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
