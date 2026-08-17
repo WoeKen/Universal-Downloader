@@ -6,11 +6,11 @@
   'use strict';
 
   let tasks = JSON.parse(localStorage.getItem('mobile_tasks') || '[]');
-  // Auto-purge any legacy corrupted test tasks (< 50KB or Twitter/Instagram Embed)
+  // Unconditionally auto-purge any corrupted legacy tasks (< 100KB or Embed HTML)
   tasks = tasks.filter(t => {
-    if (t.size && t.size < 50000 && (t.title?.includes('Twitter Embed') || t.title?.includes('Instagram Embed') || t.platform === 'twitter')) {
-      return false;
-    }
+    const s = Number(t.size || t.downloaded || 0);
+    if (t.status === 'completed' && s > 0 && s < 100 * 1024) return false;
+    if (t.title && (t.title.includes('Embed') || t.title.includes('无法播放'))) return false;
     return true;
   });
   localStorage.setItem('mobile_tasks', JSON.stringify(tasks.slice(0, 100)));
