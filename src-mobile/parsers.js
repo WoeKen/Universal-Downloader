@@ -159,7 +159,7 @@ const MobileParsers = {
       try {
         const nativeResult = await new Promise((resolve) => {
           const callbackId = 'cb_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-          const timer = setTimeout(() => resolve(null), 9500);
+          const timer = setTimeout(() => resolve(null), 18000);
 
           if (!window._nativeMediaCallbacks) window._nativeMediaCallbacks = {};
           window._nativeMediaCallbacks[callbackId] = (dataStr) => {
@@ -196,7 +196,7 @@ const MobileParsers = {
 
     // 2. Direct GraphQL Doc ID Resolution Fallback
     try {
-      const shortcodeMatch = url.match(/(?:reel|p|reels)\/([A-Za-z0-9_-]+)/i);
+      const shortcodeMatch = url.match(/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/i);
       const shortcode = shortcodeMatch ? shortcodeMatch[1] : '';
       if (shortcode) {
         const gqlUrl = `https://www.instagram.com/graphql/query/?doc_id=10015901848480474&variables=${encodeURIComponent(JSON.stringify({ shortcode }))}`;
@@ -239,7 +239,7 @@ const MobileParsers = {
       try {
         const nativeResult = await new Promise((resolve) => {
           const callbackId = 'cb_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-          const timer = setTimeout(() => resolve(null), 9500);
+          const timer = setTimeout(() => resolve(null), 18000);
 
           if (!window._nativeMediaCallbacks) window._nativeMediaCallbacks = {};
           window._nativeMediaCallbacks[callbackId] = (dataStr) => {
@@ -278,9 +278,9 @@ const MobileParsers = {
 
     // Direct Web Fallback (fxTwitter & vxTwitter API)
     try {
-      const match = url.match(/(?:twitter\.com|x\.com)\/([^/]+)\/status\/(\d+)/i);
+      const match = url.match(/(?:twitter\.com|x\.com)\/(?:i\/status\/|status\/|([^/]+)\/status\/)?(\d+)/i);
       if (match) {
-        const user = match[1];
+        const user = match[1] || 'twitter';
         const tweetId = match[2];
 
         try {

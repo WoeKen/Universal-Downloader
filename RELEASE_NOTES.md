@@ -1,32 +1,27 @@
-# 🚀 Universal Downloader v1.3.5 (全能下载器旗舰正式版)
+# 🚀 Universal Downloader v1.3.6 旗舰发布说明
 
-> **Next-Gen Liquid Glass Multi-Protocol Media & Stream Workstation**
-> 专为极致性能与极简美学打造的 Windows & Android 全协议下载与媒体工作站。
+## 🌟 核心突破与重构：攻克 X (Twitter) 与 Instagram 极清多管线直析架构
 
----
-
-## 🌟 v1.3.5 核心升级：攻克 Twitter / X 极清视频直析引擎 (Native Direct X Engine)
-
-### 1. 🛡️ 官方直析多管线矩阵 (fxTwitter + vxTwitter + TwitSave Direct)
-- 完美支持各类复杂 Twitter/X 视频 URL 变体（如包含 `/video/1`、多清晰度、长推文、Amplify 媒体流）；
-- 直接解析官方 `video.twimg.com` 极清 MP4 原始直链，彻底攻克后台 WebView 被推特登录墙拦截导致下载 1.1 KB 文件的根本问题。
-
-### 2. 🎨 UI 全面重构极简工作台（彻底移除“智能自适应”）
-- 默认直接选中 `🎬 视频 (MP4)`，彻底消除歧义；
-- 新增一键清空与极速粘贴按钮，配合流体渐变与丝滑触觉反馈。
-
-### 3. 🧹 启动时自动净化历史损坏任务
-- 自动识别并清除旧版本留存在本地的 1.1 KB 损坏条目，保持列表纯净无干扰。
+1. **彻底攻克 Twitter / X 与 Instagram 拦截与短链重定向失效**：
+   - 彻底移除了导致请求被登录墙污染的破坏性 HTTP 重定向跳转逻辑；
+   - 采用多管线直析架构（Direct Multi-Pipeline Engine）：
+     - **Twitter / X**：`api.fxtwitter.com` + `api.vxtwitter.com` + `twitsave.com`，直接匹配并提取 `video.twimg.com` 极清原画 MP4 流；
+     - **Instagram / Reels**：`doc_id=10015901848480474` GraphQL 引擎 + 官方 Captioned Embed 直析管线，直接提取 `cdninstagram.com` 原画无损 MP4 视频流；
+2. **下载与落盘防损熔断器 (Anti-Corruption Circuit Breaker)**：
+   - 严格拦截非多媒体网页文本（HTML / 错误页），对于小于 100KB 或携带 HTML 标签的数据强制熔断拒绝入库，100% 杜绝 1.1 KB 假死文件；
+   - 启动时自动清理本地历史损坏记录；
+3. **UI 极简升级**：
+   - 彻底移除“智能自适应”，默认锁定 `🎬 视频 (MP4)`，新增一键清空与快速粘贴。
 
 ---
 
-## 📦 官方安装包列表与直接下载 (严格纯净 3 款正式包)
+## 📦 官方安装包列表 (严格 3 款正式包)
 
-| 平台 | 安装包名称 | 文件大小 | 说明 | 直链下载地址 |
-| :--- | :--- | :--- | :--- | :--- |
-| **📱 Android 手机端** | `Universal-Downloader-v1.3.5-Android.apk` | **4.59 MB** | 彻底攻克Twitter/X全场景极清解析 · 全新极简UI · 原生OTA覆盖升级 | [📥 点击下载 Android APK](https://github.com/WoeKen/Universal-Downloader/releases/download/v1.3.5/Universal-Downloader-v1.3.5-Android.apk) |
-| **💻 Windows 安装版** | `Universal-Downloader-Setup-1.3.5.exe` | **74.99 MB** | 一键安装，全协议支持，自动关联磁力与种子协议 | [📥 点击下载 Setup.exe](https://github.com/WoeKen/Universal-Downloader/releases/download/v1.3.5/Universal-Downloader-Setup-1.3.5.exe) |
-| **🗜️ Windows 便携版** | `Universal-Downloader-v1.3.5-Windows-Portable.zip` | **109.26 MB** | 解压即用，纯净便携 | [📥 点击下载 Portable.zip](https://github.com/WoeKen/Universal-Downloader/releases/download/v1.3.5/Universal-Downloader-v1.3.5-Windows-Portable.zip) |
+| 平台 | 安装包名称 | 文件大小 | 说明 |
+| :--- | :--- | :--- | :--- |
+| **📱 Android 手机端** | `Universal-Downloader-v1.3.6-Android.apk` | **~4.59 MB** | 彻底攻克 Twitter/Instagram 全场景极清解析 · 全新极简UI · 原生OTA覆盖升级 |
+| **💻 Windows 安装版** | `Universal-Downloader-Setup-1.3.6.exe` | **~75 MB** | 一键安装，全协议支持，自动关联磁力与种子协议 |
+| **🗜️ Windows 便携版** | `Universal-Downloader-v1.3.6-Windows-Portable.zip` | **~109 MB** | 解压即用，纯净便携 |
 
 ---
 

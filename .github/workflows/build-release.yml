@@ -136,12 +136,12 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "🚀 Universal Downloader v1.3.5 (Windows & Android 旗舰双端发布)"
+          name: "🚀 Universal Downloader v1.3.6 (Windows & Android 旗舰双端发布)"
           body_path: RELEASE_NOTES.md
           files: |
-            release-assets/Universal-Downloader-Setup-1.3.5.exe
-            release-assets/Universal-Downloader-v1.3.5-Windows-Portable.zip
-            release-assets/Universal-Downloader-v1.3.5-Android.apk
+            release-assets/Universal-Downloader-Setup-1.3.6.exe
+            release-assets/Universal-Downloader-v1.3.6-Windows-Portable.zip
+            release-assets/Universal-Downloader-v1.3.6-Android.apk
           draft: false
           prerelease: false
           generate_release_notes: false

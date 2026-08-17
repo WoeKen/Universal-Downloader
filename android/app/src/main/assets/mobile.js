@@ -861,7 +861,7 @@
     }
 
     // 8. In-App OTA Update Engine
-    let APP_VERSION = 'v1.3.5';
+    let APP_VERSION = 'v1.3.6';
     if (window.NativeAndroid?.getAppVersion) {
       try {
         const nativeVer = window.NativeAndroid.getAppVersion();

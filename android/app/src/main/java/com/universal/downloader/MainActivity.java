@@ -348,7 +348,7 @@ public class MainActivity extends AppCompatActivity {
 
         @JavascriptInterface
         public void resolveNativeMedia(final String rawInput, final String callbackId, final String formatMode) {
-            final String reqMode = (formatMode != null && !formatMode.isEmpty()) ? formatMode : "auto";
+            final String reqMode = (formatMode != null && !formatMode.isEmpty()) ? formatMode : "video";
 
             new Thread(new Runnable() {
                 @Override
@@ -358,59 +358,75 @@ public class MainActivity extends AppCompatActivity {
                         Matcher urlMatcher = Pattern.compile("(https?://[\\w\\-._~:/?#\\[\\]@!$&'()*+,;=%]+)").matcher(rawInput);
                         String cleanUrl = urlMatcher.find() ? urlMatcher.group(1).replaceAll("[\\u4e00-\\u9fa5)\\]}>,;。，！？、“”‘’]+$", "") : rawInput.trim();
 
-                        // 2. Follow redirects
+                        // 2. Direct High-Precision Platform Resolvers (Direct without destructive redirect hops)
+                        if (cleanUrl.contains("twitter.com") || cleanUrl.contains("x.com")) {
+                            JSONObject res = resolveTwitterDirect(cleanUrl, reqMode);
+                            if (res != null) {
+                                notifyMediaResolved(callbackId, res);
+                                return;
+                            }
+                        }
+
+                        if (cleanUrl.contains("instagram.com") || cleanUrl.contains("instagr.am")) {
+                            JSONObject res = resolveInstagramDirect(cleanUrl, reqMode);
+                            if (res != null) {
+                                notifyMediaResolved(callbackId, res);
+                                return;
+                            }
+                        }
+
+                        if (cleanUrl.contains("douyin.com")) {
+                            JSONObject res = resolveDouyinDirect(cleanUrl, reqMode);
+                            if (res != null) {
+                                notifyMediaResolved(callbackId, res);
+                                return;
+                            }
+                        }
+
+                        if (cleanUrl.contains("pornhub.com") || cleanUrl.contains("xvideos.com") || cleanUrl.contains("spankbang.com") || cleanUrl.contains("redtube.com")) {
+                            JSONObject res = resolveTubeDirect(cleanUrl, reqMode);
+                            if (res != null) {
+                                notifyMediaResolved(callbackId, res);
+                                return;
+                            }
+                        }
+
+                        // 3. Shortlink redirect expansion (for bit.ly, t.co, b23.tv, v.douyin.com)
                         String currentUrl = cleanUrl;
-                        for (int hop = 0; hop < 6; hop++) {
-                            HttpURLConnection conn = (HttpURLConnection) new URL(currentUrl).openConnection();
-                            conn.setInstanceFollowRedirects(false);
-                            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
-                            conn.connect();
-                            int code = conn.getResponseCode();
-                            if (code == 301 || code == 302 || code == 303 || code == 307 || code == 308) {
-                                String loc = conn.getHeaderField("Location");
+                        if (cleanUrl.contains("t.co/") || cleanUrl.contains("bit.ly/") || cleanUrl.contains("v.douyin.com/") || cleanUrl.contains("b23.tv/")) {
+                            for (int hop = 0; hop < 6; hop++) {
+                                HttpURLConnection conn = (HttpURLConnection) new URL(currentUrl).openConnection();
+                                conn.setInstanceFollowRedirects(false);
+                                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
+                                conn.setConnectTimeout(6000);
+                                conn.setReadTimeout(6000);
+                                conn.connect();
+                                int code = conn.getResponseCode();
+                                if (code == 301 || code == 302 || code == 303 || code == 307 || code == 308) {
+                                    String loc = conn.getHeaderField("Location");
+                                    conn.disconnect();
+                                    if (loc != null && !loc.isEmpty()) {
+                                        currentUrl = loc;
+                                        continue;
+                                    }
+                                }
                                 conn.disconnect();
-                                if (loc != null && !loc.isEmpty()) {
-                                    currentUrl = loc;
-                                    continue;
+                                break;
+                            }
+
+                            if (currentUrl.contains("twitter.com") || currentUrl.contains("x.com")) {
+                                JSONObject res = resolveTwitterDirect(currentUrl, reqMode);
+                                if (res != null) {
+                                    notifyMediaResolved(callbackId, res);
+                                    return;
                                 }
                             }
-                            conn.disconnect();
-                            break;
-                        }
-
-                        // 3. Twitter / X Direct High-Definition Resolution (fxTwitter, vxTwitter, TwitSave)
-                        if (currentUrl.contains("twitter.com") || currentUrl.contains("x.com")) {
-                            JSONObject res = resolveTwitterDirect(currentUrl, reqMode);
-                            if (res != null) {
-                                notifyMediaResolved(callbackId, res);
-                                return;
-                            }
-                        }
-
-                        // 4. Instagram Direct GraphQL Resolution (Doc ID 10015901848480474 Engine)
-                        if (currentUrl.contains("instagram.com") || currentUrl.contains("instagr.am")) {
-                            JSONObject res = resolveInstagramDirect(currentUrl, reqMode);
-                            if (res != null) {
-                                notifyMediaResolved(callbackId, res);
-                                return;
-                            }
-                        }
-
-                        // 4. Douyin Direct Resolution
-                        if (currentUrl.contains("douyin.com")) {
-                            JSONObject res = resolveDouyinDirect(currentUrl, reqMode);
-                            if (res != null) {
-                                notifyMediaResolved(callbackId, res);
-                                return;
-                            }
-                        }
-
-                        // 5. Generic Tube & Adult Portals (Pornhub, Xvideos, SpankBang, etc.)
-                        if (currentUrl.contains("pornhub.com") || currentUrl.contains("xvideos.com") || currentUrl.contains("spankbang.com") || currentUrl.contains("redtube.com")) {
-                            JSONObject res = resolveTubeDirect(currentUrl, reqMode);
-                            if (res != null) {
-                                notifyMediaResolved(callbackId, res);
-                                return;
+                            if (currentUrl.contains("instagram.com") || currentUrl.contains("instagr.am")) {
+                                JSONObject res = resolveInstagramDirect(currentUrl, reqMode);
+                                if (res != null) {
+                                    notifyMediaResolved(callbackId, res);
+                                    return;
+                                }
                             }
                         }
 
@@ -418,7 +434,7 @@ public class MainActivity extends AppCompatActivity {
                         e.printStackTrace();
                     }
 
-                    // 6. Universal Sandboxed Active Chromium Stream Sniffer (Supports Tube & arbitrary web pages)
+                    // 4. Universal Sandboxed Active Chromium Stream Sniffer (Fallback)
                     resolveWithChromiumSniffer(rawInput, callbackId, reqMode);
                 }
             }).start();
@@ -426,18 +442,19 @@ public class MainActivity extends AppCompatActivity {
 
         private JSONObject resolveTwitterDirect(String currentUrl, String reqMode) {
             try {
-                Matcher tm = Pattern.compile("(?:twitter\\.com|x\\.com)/([^/]+)/status/(\\d+)").matcher(currentUrl);
+                Matcher tm = Pattern.compile("(?:twitter\\.com|x\\.com)/(?:i/status/|status/|([^/]+)/status/)?(\\d+)").matcher(currentUrl);
                 if (!tm.find()) return null;
                 String user = tm.group(1);
+                if (user == null || user.isEmpty()) user = "twitter";
                 String tweetId = tm.group(2);
 
-                // 1. Try fxTwitter API (Supports HD video, titles, covers)
+                // 1. Try fxTwitter API (Fastest & richest metadata)
                 try {
                     String fxUrl = "https://api.fxtwitter.com/" + user + "/status/" + tweetId;
                     HttpURLConnection conn = (HttpURLConnection) new URL(fxUrl).openConnection();
                     conn.setRequestProperty("User-Agent", "UniversalDownloader/1.0");
-                    conn.setConnectTimeout(6000);
-                    conn.setReadTimeout(6000);
+                    conn.setConnectTimeout(7000);
+                    conn.setReadTimeout(7000);
                     if (conn.getResponseCode() == 200) {
                         BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
                         StringBuilder sb = new StringBuilder();
@@ -480,8 +497,8 @@ public class MainActivity extends AppCompatActivity {
                     String vxUrl = "https://api.vxtwitter.com/" + user + "/status/" + tweetId;
                     HttpURLConnection conn = (HttpURLConnection) new URL(vxUrl).openConnection();
                     conn.setRequestProperty("User-Agent", "UniversalDownloader/1.0");
-                    conn.setConnectTimeout(6000);
-                    conn.setReadTimeout(6000);
+                    conn.setConnectTimeout(7000);
+                    conn.setReadTimeout(7000);
                     if (conn.getResponseCode() == 200) {
                         BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
                         StringBuilder sb = new StringBuilder();
@@ -521,12 +538,12 @@ public class MainActivity extends AppCompatActivity {
 
                 // 3. Try TwitSave Engine
                 try {
-                    String cleanTweet = currentUrl.replaceAll("/video/\\d+", "");
+                    String cleanTweet = "https://twitter.com/" + user + "/status/" + tweetId;
                     String twitSaveUrl = "https://twitsave.com/info?url=" + URLEncoder.encode(cleanTweet, "UTF-8");
                     HttpURLConnection conn = (HttpURLConnection) new URL(twitSaveUrl).openConnection();
                     conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
-                    conn.setConnectTimeout(7000);
-                    conn.setReadTimeout(7000);
+                    conn.setConnectTimeout(8000);
+                    conn.setReadTimeout(8000);
                     if (conn.getResponseCode() == 200) {
                         BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
                         StringBuilder sb = new StringBuilder();
@@ -559,66 +576,99 @@ public class MainActivity extends AppCompatActivity {
         private JSONObject resolveInstagramDirect(String currentUrl, String reqMode) {
             try {
                 String shortcode = "";
-                Matcher scMat = Pattern.compile("(?:reel|p|reels)/([A-Za-z0-9_-]+)").matcher(currentUrl);
+                Matcher scMat = Pattern.compile("(?:reel|reels|p|tv)/([A-Za-z0-9_-]+)").matcher(currentUrl);
                 if (scMat.find()) {
                     shortcode = scMat.group(1);
                 }
                 if (shortcode.isEmpty()) return null;
 
-                String gqlUrl = "https://www.instagram.com/graphql/query/?doc_id=10015901848480474&variables=%7B%22shortcode%22%3A%22" + shortcode + "%22%7D";
-                HttpURLConnection igConn = (HttpURLConnection) new URL(gqlUrl).openConnection();
-                igConn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
-                igConn.setRequestProperty("X-IG-App-ID", "936619743392459");
-                igConn.setRequestProperty("Accept", "*/*");
-                igConn.setConnectTimeout(8000);
-                igConn.setReadTimeout(8000);
+                // 1. Try Instagram Official GraphQL Engine
+                try {
+                    String gqlUrl = "https://www.instagram.com/graphql/query/?doc_id=10015901848480474&variables=%7B%22shortcode%22%3A%22" + shortcode + "%22%7D";
+                    HttpURLConnection igConn = (HttpURLConnection) new URL(gqlUrl).openConnection();
+                    igConn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
+                    igConn.setRequestProperty("X-IG-App-ID", "936619743392459");
+                    igConn.setRequestProperty("Accept", "*/*");
+                    igConn.setConnectTimeout(8000);
+                    igConn.setReadTimeout(8000);
 
-                if (igConn.getResponseCode() == 200) {
-                    BufferedReader igReader = new BufferedReader(new InputStreamReader(igConn.getInputStream()));
-                    StringBuilder igJsonStr = new StringBuilder();
-                    String line;
-                    while ((line = igReader.readLine()) != null) {
-                        igJsonStr.append(line);
-                    }
-                    igReader.close();
-                    igConn.disconnect();
+                    if (igConn.getResponseCode() == 200) {
+                        BufferedReader igReader = new BufferedReader(new InputStreamReader(igConn.getInputStream(), "UTF-8"));
+                        StringBuilder igJsonStr = new StringBuilder();
+                        String line;
+                        while ((line = igReader.readLine()) != null) igJsonStr.append(line);
+                        igReader.close();
+                        igConn.disconnect();
 
-                    JSONObject json = new JSONObject(igJsonStr.toString());
-                    JSONObject data = json.optJSONObject("data");
-                    if (data != null) {
-                        JSONObject media = data.optJSONObject("xdt_shortcode_media");
-                        if (media == null) media = data.optJSONObject("shortcode_media");
-                        if (media != null) {
-                            String videoUrl = media.optString("video_url");
-                            String coverUrl = media.optString("display_url");
-                            String title = "Instagram 极清视频";
-                            JSONObject edgeCaption = media.optJSONObject("edge_media_to_caption");
-                            if (edgeCaption != null) {
-                                JSONArray edges = edgeCaption.optJSONArray("edges");
-                                if (edges != null && edges.length() > 0) {
-                                    JSONObject firstEdge = edges.getJSONObject(0).optJSONObject("node");
-                                    if (firstEdge != null) {
-                                        String capText = firstEdge.optString("text");
-                                        if (capText != null && !capText.trim().isEmpty()) {
-                                            title = capText.trim().replaceAll("[\\r\\n]+", " ");
-                                            if (title.length() > 60) title = title.substring(0, 60) + "...";
+                        JSONObject json = new JSONObject(igJsonStr.toString());
+                        JSONObject data = json.optJSONObject("data");
+                        if (data != null) {
+                            JSONObject media = data.optJSONObject("xdt_shortcode_media");
+                            if (media == null) media = data.optJSONObject("shortcode_media");
+                            if (media != null) {
+                                String videoUrl = media.optString("video_url");
+                                String coverUrl = media.optString("display_url");
+                                String title = "Instagram 极清视频";
+                                JSONObject edgeCaption = media.optJSONObject("edge_media_to_caption");
+                                if (edgeCaption != null) {
+                                    JSONArray edges = edgeCaption.optJSONArray("edges");
+                                    if (edges != null && edges.length() > 0) {
+                                        JSONObject firstEdge = edges.getJSONObject(0).optJSONObject("node");
+                                        if (firstEdge != null) {
+                                            String capText = firstEdge.optString("text");
+                                            if (capText != null && !capText.trim().isEmpty()) {
+                                                title = capText.trim().replaceAll("[\\r\\n]+", " ");
+                                                if (title.length() > 60) title = title.substring(0, 60) + "...";
+                                            }
                                         }
                                     }
                                 }
-                            }
 
-                            if (!videoUrl.isEmpty()) {
-                                JSONObject result = new JSONObject();
-                                result.put("platform", "instagram");
-                                result.put("title", title);
-                                result.put("cover", coverUrl);
-                                result.put("downloadUrl", videoUrl);
-                                result.put("category", reqMode.equals("audio") ? "audio" : "video");
-                                return result;
+                                if (!videoUrl.isEmpty()) {
+                                    JSONObject result = new JSONObject();
+                                    result.put("platform", "instagram");
+                                    result.put("title", title);
+                                    result.put("cover", coverUrl);
+                                    result.put("downloadUrl", videoUrl);
+                                    result.put("category", reqMode.equals("audio") ? "audio" : "video");
+                                    return result;
+                                }
                             }
                         }
                     }
-                }
+                } catch (Exception ignored) {}
+
+                // 2. Try Instagram Captioned Embed Page
+                try {
+                    String embedUrl = "https://www.instagram.com/p/" + shortcode + "/embed/captioned/";
+                    HttpURLConnection embConn = (HttpURLConnection) new URL(embedUrl).openConnection();
+                    embConn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
+                    embConn.setConnectTimeout(8000);
+                    embConn.setReadTimeout(8000);
+
+                    if (embConn.getResponseCode() == 200) {
+                        BufferedReader embReader = new BufferedReader(new InputStreamReader(embConn.getInputStream(), "UTF-8"));
+                        StringBuilder embHtml = new StringBuilder();
+                        String line;
+                        while ((line = embReader.readLine()) != null) embHtml.append(line);
+                        embReader.close();
+                        embConn.disconnect();
+
+                        String html = embHtml.toString();
+                        Matcher vm = Pattern.compile("https://[^\"'\\s<>]+\\.mp4[^\"'\\s<>]*").matcher(html);
+                        if (vm.find()) {
+                            String videoUrl = vm.group(0).replace("\\/", "/").replace("&amp;", "&");
+                            JSONObject result = new JSONObject();
+                            result.put("platform", "instagram");
+                            result.put("title", "Instagram 极清视频");
+                            result.put("cover", "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png");
+                            result.put("downloadUrl", videoUrl);
+                            result.put("category", reqMode.equals("audio") ? "audio" : "video");
+                            return result;
+                        }
+                    }
+                } catch (Exception ignored) {}
+
             } catch (Exception ignored) {}
             return null;
         }
